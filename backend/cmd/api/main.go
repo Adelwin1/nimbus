@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/adel/nimbus/backend/internal/auth"
 	"github.com/adel/nimbus/backend/internal/config"
 	"github.com/adel/nimbus/backend/internal/database"
 	appmiddleware "github.com/adel/nimbus/backend/internal/middleware"
@@ -40,6 +41,19 @@ func main() {
 	}
 	defer db.Close()
 
+	// Authentication dependencies.
+	authRepository := auth.NewRepository(db)
+
+	authService := auth.NewService(
+		authRepository,
+		cfg.JWTAccessSecret,
+		cfg.JWTRefreshSecret,
+		cfg.AccessTokenTTL,
+		cfg.RefreshTokenTTL,
+	)
+
+	authHandler := auth.NewHandler(authService)
+
 	router := chi.NewRouter()
 
 	router.Use(appmiddleware.RequestID)
@@ -48,16 +62,18 @@ func main() {
 	router.Use(appmiddleware.CORS(cfg.FrontendOrigin))
 
 	router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-
-		_ = json.NewEncoder(w).Encode(map[string]any{
+		writeJSON(w, http.StatusOK, map[string]any{
 			"status":      "healthy",
 			"service":     "nimbus-api",
 			"environment": cfg.AppEnv,
 			"request_id":  appmiddleware.GetRequestID(r.Context()),
 		})
 	})
+
+	router.Mount(
+		"/api/v1/auth",
+		auth.Routes(authHandler, authService),
+	)
 
 	server := &http.Server{
 		Addr:              ":" + cfg.Port,
@@ -81,9 +97,9 @@ func main() {
 	}()
 
 	select {
-	case err := <-serverErrors:
-		if !errors.Is(err, http.ErrServerClosed) {
-			logger.Error("server failure", "error", err)
+	case serverError := <-serverErrors:
+		if !errors.Is(serverError, http.ErrServerClosed) {
+			logger.Error("server failure", "error", serverError)
 			os.Exit(1)
 		}
 
@@ -103,4 +119,19 @@ func main() {
 	}
 
 	logger.Info("Nimbus API stopped")
+}
+
+func writeJSON(
+	w http.ResponseWriter,
+	statusCode int,
+	payload any,
+) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+
+	if payload == nil {
+		return
+	}
+
+	_ = json.NewEncoder(w).Encode(payload)
 }
