@@ -1,0 +1,253 @@
+name: Nimbus CI/CD
+
+on:
+  pull_request:
+    branches:
+      - main
+
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+concurrency:
+  group: nimbus-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NEXT_PUBLIC_API_URL: https://nimbus-api-production-6a05.up.railway.app/api/v1
+
+jobs:
+  backend:
+    name: Backend Quality Gate
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: nimbus
+          POSTGRES_PASSWORD: nimbus_test_password
+          POSTGRES_DB: nimbus_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nimbus -d nimbus_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      TEST_DATABASE_URL: postgres://nimbus:nimbus_test_password@localhost:5432/nimbus_test?sslmode=disable
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: backend/go.mod
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Verify formatting
+        run: |
+          unformatted="$(
+            gofmt -l \
+              $(find . -type f -name '*.go' -not -path './vendor/*')
+          )"
+
+          if [ -n "$unformatted" ]; then
+            echo "The following Go files are not formatted:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Run production migrations against test database
+        env:
+          DATABASE_URL: postgres://nimbus:nimbus_test_password@localhost:5432/nimbus_test?sslmode=disable
+          MIGRATIONS_DIR: migrations
+        run: go run ./cmd/migrate
+
+      - name: Run backend tests
+        run: go test -count=1 ./...
+
+      - name: Run race detector
+        run: go test -race -count=1 ./...
+
+      - name: Run Go vet
+        run: go vet ./...
+
+      - name: Build API binaries
+        run: |
+          go build -trimpath -o /tmp/nimbus-api ./cmd/api
+          go build -trimpath -o /tmp/nimbus-migrate ./cmd/migrate
+
+      - name: Build backend container
+        working-directory: .
+        run: |
+          docker build \
+            --tag "nimbus-api:${GITHUB_SHA}" \
+            ./backend
+
+  frontend:
+    name: Frontend Quality Gate
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run frontend tests
+        run: npm test
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Build production frontend
+        run: npm run build
+
+  deploy-backend:
+    name: Deploy Backend
+    runs-on: ubuntu-latest
+    needs:
+      - backend
+      - frontend
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    environment:
+      name: production-backend
+      url: https://nimbus-api-production-6a05.up.railway.app
+
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_PROJECT_ID: 870b2d55-3caf-490b-9537-e4eca7aa6004
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Install Railway CLI
+        run: npm install --global @railway/cli@5.28.1
+
+      - name: Deploy Railway API
+        run: |
+          railway up backend \
+            --path-as-root \
+            --project "$RAILWAY_PROJECT_ID" \
+            --environment production \
+            --service nimbus-api \
+            --ci
+
+      - name: Verify backend health
+        run: |
+          curl \
+            --fail \
+            --show-error \
+            --silent \
+            --retry 10 \
+            --retry-all-errors \
+            --retry-delay 3 \
+            https://nimbus-api-production-6a05.up.railway.app/health
+
+  deploy-frontend:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    needs:
+      - backend
+      - frontend
+      - deploy-backend
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    environment:
+      name: production-frontend
+      url: https://nimbus-alpha-livid.vercel.app
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Pull Vercel production settings
+        run: |
+          npx --yes vercel@57.0.0 pull \
+            --yes \
+            --environment=production \
+            --token="$VERCEL_TOKEN"
+
+      - name: Build Vercel artifacts
+        run: |
+          npx --yes vercel@57.0.0 build \
+            --prod \
+            --token="$VERCEL_TOKEN"
+
+      - name: Deploy Vercel production
+        run: |
+          npx --yes vercel@57.0.0 deploy \
+            --prebuilt \
+            --prod \
+            --token="$VERCEL_TOKEN"
+
+      - name: Verify frontend
+        run: |
+          curl \
+            --fail \
+            --show-error \
+            --silent \
+            --head \
+            --retry 10 \
+            --retry-all-errors \
+            --retry-delay 3 \
+            https://nimbus-alpha-livid.vercel.app
