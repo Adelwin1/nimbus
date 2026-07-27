@@ -25,8 +25,18 @@ const (
 	migrationLockID            int64 = 7534672891345
 )
 
-var migrationFilePattern = regexp.MustCompile(
-	`^(\d+)_.*\.sql$`,
+var (
+	migrationFilePattern = regexp.MustCompile(
+		`^(\d+)_.*\.sql$`,
+	)
+
+	outerTransactionStartPattern = regexp.MustCompile(
+		`(?is)^\s*(?:BEGIN(?:\s+(?:WORK|TRANSACTION))?|START\s+TRANSACTION)\s*;\s*`,
+	)
+
+	outerTransactionCommitPattern = regexp.MustCompile(
+		`(?is)\s*COMMIT(?:\s+(?:WORK|TRANSACTION))?\s*;\s*$`,
+	)
 )
 
 type migration struct {
@@ -247,14 +257,20 @@ func loadMigrations(
 			)
 		}
 
-		if strings.TrimSpace(string(contents)) == "" {
+		upSQL, err := extractUpMigrationSQL(
+			string(contents),
+		)
+		if err != nil {
 			return nil, fmt.Errorf(
-				"migration %s is empty",
+				"parse migration %s: %w",
 				entry.Name(),
+				err,
 			)
 		}
 
-		sum := sha256.Sum256(contents)
+		sum := sha256.Sum256(
+			[]byte(upSQL),
+		)
 
 		versions[version] = entry.Name()
 
@@ -263,7 +279,7 @@ func loadMigrations(
 			migration{
 				version: version,
 				name:    entry.Name(),
-				sql:     string(contents),
+				sql:     upSQL,
 				checksum: hex.EncodeToString(
 					sum[:],
 				),
@@ -287,6 +303,122 @@ func loadMigrations(
 	}
 
 	return migrations, nil
+}
+
+func extractUpMigrationSQL(
+	contents string,
+) (string, error) {
+	normalized := strings.ReplaceAll(
+		contents,
+		"\r\n",
+		"\n",
+	)
+
+	lines := strings.Split(normalized, "\n")
+
+	upStart := -1
+	downStart := -1
+
+	for index, line := range lines {
+		switch migrationSectionMarker(line) {
+		case "up":
+			if upStart == -1 {
+				upStart = index + 1
+			}
+
+		case "down":
+			if downStart == -1 {
+				downStart = index
+			}
+		}
+	}
+
+	start := 0
+	end := len(lines)
+
+	if upStart >= 0 {
+		start = upStart
+	}
+
+	if downStart >= start {
+		end = downStart
+	}
+
+	sql := strings.TrimSpace(
+		strings.Join(
+			lines[start:end],
+			"\n",
+		),
+	)
+
+	// The migration runner owns the transaction.
+	// Remove only an outer BEGIN/COMMIT wrapper.
+	sql = outerTransactionStartPattern.ReplaceAllString(
+		sql,
+		"",
+	)
+	sql = outerTransactionCommitPattern.ReplaceAllString(
+		sql,
+		"",
+	)
+	sql = strings.TrimSpace(sql)
+
+	if sql == "" {
+		return "", fmt.Errorf(
+			"up migration contains no SQL",
+		)
+	}
+
+	return sql, nil
+}
+
+func migrationSectionMarker(
+	line string,
+) string {
+	trimmed := strings.ToLower(
+		strings.TrimSpace(line),
+	)
+
+	if !strings.HasPrefix(trimmed, "--") {
+		return ""
+	}
+
+	marker := strings.TrimSpace(
+		strings.TrimPrefix(trimmed, "--"),
+	)
+	marker = strings.TrimSpace(
+		strings.TrimPrefix(marker, "+"),
+	)
+	marker = strings.ReplaceAll(
+		marker,
+		"_",
+		" ",
+	)
+	marker = strings.Join(
+		strings.Fields(marker),
+		" ",
+	)
+
+	switch marker {
+	case "up",
+		"goose up",
+		"migrate up",
+		"migrate:up",
+		"up migration",
+		"migration up":
+		return "up"
+
+	case "down",
+		"goose down",
+		"migrate down",
+		"migrate:down",
+		"down migration",
+		"migration down":
+		return "down"
+
+	default:
+		return ""
+	}
 }
 
 func applyMigration(
