@@ -147,7 +147,7 @@ jobs:
       url: https://nimbus-api-production-6a05.up.railway.app
 
     env:
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
       RAILWAY_PROJECT_ID: 870b2d55-3caf-490b-9537-e4eca7aa6004
 
     steps:
