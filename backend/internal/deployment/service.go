@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/adel/nimbus/backend/internal/activity"
-"github.com/adel/nimbus/backend/internal/monitoring"
+	"github.com/adel/nimbus/backend/internal/monitoring"
 	"github.com/google/uuid"
 )
 
@@ -473,9 +473,8 @@ func (s *Service) verifyDeployment(
 						deployment.Version,
 					),
 					map[string]any{
-						"version": deployment.Version,
-						"required_healthy_checks":
-							s.requiredHealthyChecks,
+						"version":                 deployment.Version,
+						"required_healthy_checks": s.requiredHealthyChecks,
 					},
 				)
 			}

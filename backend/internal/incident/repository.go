@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	"github.com/adel/nimbus/backend/internal/activity"
-"github.com/google/uuid"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -227,13 +227,11 @@ func (r *Repository) recordIncidentOpened(
 			incident.Title,
 		),
 		Metadata: map[string]any{
-			"incident_type": incident.IncidentType,
-			"severity":      incident.Severity,
-			"dedup_key":     incident.DedupKey,
-			"source_health_check_id":
-				input.SourceHealthCheckID,
-			"source_deployment_id":
-				input.SourceDeploymentID,
+			"incident_type":          incident.IncidentType,
+			"severity":               incident.Severity,
+			"dedup_key":              incident.DedupKey,
+			"source_health_check_id": input.SourceHealthCheckID,
+			"source_deployment_id":   input.SourceDeploymentID,
 		},
 	})
 }

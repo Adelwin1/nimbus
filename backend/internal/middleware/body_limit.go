@@ -72,9 +72,8 @@ func writePayloadTooLarge(
 	_ = json.NewEncoder(w).Encode(
 		map[string]any{
 			"error": map[string]any{
-				"code": "payload_too_large",
-				"message":
-					"Request payload is too large.",
+				"code":    "payload_too_large",
+				"message": "Request payload is too large.",
 				"request_id": GetRequestID(
 					r.Context(),
 				),
