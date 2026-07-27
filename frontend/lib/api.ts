@@ -1,4 +1,24 @@
 import type {
+  IncidentActionResponse,
+  IncidentDetailResponse,
+  IncidentListResponse,
+  RollbackResponse,
+} from "@/types/incident";
+import type {
+  CheckNowResponse,
+  HealthHistoryResponse,
+  HealthOverviewResponse,
+} from "@/types/health";
+
+import type {
+  ApplicationResponse,
+  ApplicationsResponse,
+  CreateApplicationInput,
+  DashboardResponse,
+  UpdateApplicationInput,
+} from "@/types/application";
+
+import type {
   APIErrorResponse,
   AuthResponse,
   CurrentUserResponse,
@@ -10,10 +30,15 @@ import {
   getRefreshToken,
   saveTokens,
 } from "@/lib/token-storage";
+import type {
+  CreateDeploymentInput,
+  CreateDeploymentResponse,
+  DeploymentDetailResponse,
+  DeploymentListResponse,
+} from "@/types/deployment";
 
 const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ??
-  "http://localhost:8080/api/v1";
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api/v1";
 
 export class APIError extends Error {
   status: number;
@@ -45,8 +70,7 @@ async function parseError(response: Response): Promise<APIError> {
   }
 
   return new APIError(
-    payload?.error?.message ??
-      "The request could not be completed.",
+    payload?.error?.message ?? "The request could not be completed.",
     response.status,
     payload?.error?.code,
     payload?.error?.request_id,
@@ -111,10 +135,7 @@ export async function apiRequest<T>(
     const accessToken = getAccessToken();
 
     if (accessToken) {
-      requestHeaders.set(
-        "Authorization",
-        `Bearer ${accessToken}`,
-      );
+      requestHeaders.set("Authorization", `Bearer ${accessToken}`);
     }
   }
 
@@ -123,18 +144,11 @@ export async function apiRequest<T>(
     headers: requestHeaders,
   });
 
-  if (
-    authenticated &&
-    response.status === 401 &&
-    retryOnUnauthorized
-  ) {
+  if (authenticated && response.status === 401 && retryOnUnauthorized) {
     const newAccessToken = await refreshAccessToken();
 
     if (newAccessToken) {
-      requestHeaders.set(
-        "Authorization",
-        `Bearer ${newAccessToken}`,
-      );
+      requestHeaders.set("Authorization", `Bearer ${newAccessToken}`);
 
       response = await fetch(`${API_URL}${path}`, {
         ...requestOptions,
@@ -197,4 +211,184 @@ export async function logoutUser(): Promise<void> {
   } finally {
     clearTokens();
   }
+}
+export function createApplication(
+  input: CreateApplicationInput,
+): Promise<ApplicationResponse> {
+  return apiRequest<ApplicationResponse>("/apps", {
+    method: "POST",
+    authenticated: true,
+    body: JSON.stringify(input),
+  });
+}
+
+export function listApplications(): Promise<ApplicationsResponse> {
+  return apiRequest<ApplicationsResponse>("/apps", {
+    method: "GET",
+    authenticated: true,
+  });
+}
+
+export function getApplication(
+  applicationId: string,
+): Promise<ApplicationResponse> {
+  return apiRequest<ApplicationResponse>(`/apps/${applicationId}`, {
+    method: "GET",
+    authenticated: true,
+  });
+}
+
+export function updateApplication(
+  applicationId: string,
+  input: UpdateApplicationInput,
+): Promise<ApplicationResponse> {
+  return apiRequest<ApplicationResponse>(`/apps/${applicationId}`, {
+    method: "PATCH",
+    authenticated: true,
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteApplication(applicationId: string): Promise<void> {
+  return apiRequest<void>(`/apps/${applicationId}`, {
+    method: "DELETE",
+    authenticated: true,
+  });
+}
+
+export function getDashboardSummary(): Promise<DashboardResponse> {
+  return apiRequest<DashboardResponse>("/dashboard", {
+    method: "GET",
+    authenticated: true,
+  });
+}
+
+export function getHealthOverview(
+  applicationId: string,
+): Promise<HealthOverviewResponse> {
+  return apiRequest<HealthOverviewResponse>(`/apps/${applicationId}/health`, {
+    method: "GET",
+    authenticated: true,
+  });
+}
+
+export function getHealthHistory(
+  applicationId: string,
+  limit = 50,
+  offset = 0,
+): Promise<HealthHistoryResponse> {
+  const query = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+  });
+
+  return apiRequest<HealthHistoryResponse>(
+    `/apps/${applicationId}/health/history?${query.toString()}`,
+    {
+      method: "GET",
+      authenticated: true,
+    },
+  );
+}
+
+export function runHealthCheck(
+  applicationId: string,
+): Promise<CheckNowResponse> {
+  return apiRequest<CheckNowResponse>(`/apps/${applicationId}/health/check`, {
+    method: "POST",
+    authenticated: true,
+  });
+}
+
+export async function createDeployment(
+  applicationId: string,
+  input: CreateDeploymentInput,
+): Promise<CreateDeploymentResponse> {
+  return apiRequest<CreateDeploymentResponse>(
+    `/apps/${applicationId}/deployments`,
+    {
+      method: "POST",
+      authenticated: true,
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export async function getDeployments(
+  applicationId: string,
+): Promise<DeploymentListResponse> {
+  return apiRequest<DeploymentListResponse>(
+    `/apps/${applicationId}/deployments`,
+    {
+      method: "GET",
+      authenticated: true,
+    },
+  );
+}
+
+export async function getDeploymentDetail(
+  deploymentId: string,
+): Promise<DeploymentDetailResponse> {
+  return apiRequest<DeploymentDetailResponse>(`/deployments/${deploymentId}`, {
+    method: "GET",
+    authenticated: true,
+  });
+}
+
+export async function getIncidents(): Promise<IncidentListResponse> {
+  return apiRequest<IncidentListResponse>("/incidents", {
+    method: "GET",
+    authenticated: true,
+  });
+}
+
+export async function getApplicationIncidents(
+  applicationId: string,
+): Promise<IncidentListResponse> {
+  return apiRequest<IncidentListResponse>(`/apps/${applicationId}/incidents`, {
+    method: "GET",
+    authenticated: true,
+  });
+}
+
+export async function getIncidentDetail(
+  incidentId: string,
+): Promise<IncidentDetailResponse> {
+  return apiRequest<IncidentDetailResponse>(`/incidents/${incidentId}`, {
+    method: "GET",
+    authenticated: true,
+  });
+}
+
+export async function acknowledgeIncident(
+  incidentId: string,
+): Promise<IncidentActionResponse> {
+  return apiRequest<IncidentActionResponse>(
+    `/incidents/${incidentId}/acknowledge`,
+    {
+      method: "POST",
+      authenticated: true,
+    },
+  );
+}
+
+export async function resolveIncident(
+  incidentId: string,
+): Promise<IncidentActionResponse> {
+  return apiRequest<IncidentActionResponse>(
+    `/incidents/${incidentId}/resolve`,
+    {
+      method: "POST",
+      authenticated: true,
+    },
+  );
+}
+
+export async function startIncidentRollback(
+  incidentId: string,
+): Promise<RollbackResponse> {
+  return apiRequest<RollbackResponse>(`/incidents/${incidentId}/rollback`, {
+    method: "POST",
+    authenticated: true,
+  });
 }

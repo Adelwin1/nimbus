@@ -3,6 +3,7 @@ package auth
 import (
 	"encoding/json"
 	"errors"
+	"github.com/adel/nimbus/backend/internal/httpx"
 	"net/http"
 
 	appmiddleware "github.com/adel/nimbus/backend/internal/middleware"
@@ -230,11 +231,12 @@ func writeError(
 	code string,
 	message string,
 ) {
-	writeJSON(w, status, map[string]any{
-		"error": map[string]string{
-			"code":       code,
-			"message":    message,
-			"request_id": appmiddleware.GetRequestID(r.Context()),
-		},
-	})
+	httpx.WriteError(
+		w,
+		status,
+		code,
+		message,
+		appmiddleware.GetRequestID(r.Context()),
+		nil,
+	)
 }

@@ -3,10 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import {
-  useForm,
-  type UseFormRegisterReturn,
-} from "react-hook-form";
+import { useForm, type UseFormRegisterReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
@@ -20,13 +17,10 @@ const registerSchema = z
     password: z.string().min(8).max(72),
     confirmPassword: z.string(),
   })
-  .refine(
-    (values) => values.password === values.confirmPassword,
-    {
-      message: "Passwords do not match.",
-      path: ["confirmPassword"],
-    },
-  );
+  .refine((values) => values.password === values.confirmPassword, {
+    message: "Passwords do not match.",
+    path: ["confirmPassword"],
+  });
 
 type RegisterForm = z.infer<typeof registerSchema>;
 
@@ -71,27 +65,22 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-950 px-6 py-12 text-white">
+    <main
+      id="main-content"
+      className="flex min-h-screen items-center justify-center bg-slate-950 px-6 py-12 text-white"
+    >
       <section className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-8">
-        <Link
-          href="/"
-          className="text-sm font-semibold text-sky-400"
-        >
+        <Link href="/" className="text-sm font-semibold text-sky-400">
           Nimbus
         </Link>
 
-        <h1 className="mt-4 text-3xl font-semibold">
-          Create your account
-        </h1>
+        <h1 className="mt-4 text-3xl font-semibold">Create your account</h1>
 
         <p className="mt-2 text-sm text-slate-400">
           Start monitoring your deployed applications.
         </p>
 
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="mt-8 space-y-5"
-        >
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5">
           <Field
             label="Name"
             type="text"
@@ -131,18 +120,13 @@ export default function RegisterPage() {
             disabled={isSubmitting}
             className="w-full rounded-lg bg-sky-500 px-4 py-3 font-semibold transition hover:bg-sky-400 disabled:opacity-60"
           >
-            {isSubmitting
-              ? "Creating account..."
-              : "Create account"}
+            {isSubmitting ? "Creating account..." : "Create account"}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-slate-400">
           Already have an account?{" "}
-          <Link
-            href="/login"
-            className="font-semibold text-sky-400"
-          >
+          <Link href="/login" className="font-semibold text-sky-400">
             Sign in
           </Link>
         </p>
@@ -158,17 +142,10 @@ type FieldProps = {
   registration: UseFormRegisterReturn;
 };
 
-function Field({
-  label,
-  type,
-  error,
-  registration,
-}: FieldProps) {
+function Field({ label, type, error, registration }: FieldProps) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-medium">
-        {label}
-      </span>
+      <span className="mb-2 block text-sm font-medium">{label}</span>
 
       <input
         type={type}
@@ -177,9 +154,7 @@ function Field({
       />
 
       {error ? (
-        <span className="mt-2 block text-sm text-red-400">
-          {error}
-        </span>
+        <span className="mt-2 block text-sm text-red-400">{error}</span>
       ) : null}
     </label>
   );

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { ToastProvider } from "@/components/ui/ToastProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 
 import "./globals.css";
@@ -31,7 +32,15 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AuthProvider>{children}</AuthProvider>
+        <a
+          href="#main-content"
+          className="sr-only fixed left-4 top-4 z-[200] rounded-lg bg-sky-400 px-4 py-3 font-semibold text-slate-950 shadow-xl focus:not-sr-only"
+        >
+          Skip to main content
+        </a>
+        <ToastProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </ToastProvider>
       </body>
     </html>
   );

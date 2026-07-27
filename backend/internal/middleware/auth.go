@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"context"
-	"encoding/json"
+	"github.com/adel/nimbus/backend/internal/httpx"
 	"net/http"
 	"strings"
 
@@ -60,15 +60,14 @@ func GetUserID(ctx context.Context) (uuid.UUID, bool) {
 	return userID, ok
 }
 
-func writeUnauthorized(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusUnauthorized)
-
-	_ = json.NewEncoder(w).Encode(map[string]any{
-		"error": map[string]string{
-			"code":       "unauthorized",
-			"message":    "Authentication is required.",
-			"request_id": GetRequestID(r.Context()),
-		},
-	})
+func writeUnauthorized(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	httpx.Unauthorized(
+		w,
+		GetRequestID(r.Context()),
+		"unauthorized",
+		"Authentication is required.",
+	)
 }

@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
+    <main id="main-content" className="min-h-screen bg-slate-950 text-white">
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-6">
         <p className="text-xl font-semibold">Nimbus</p>
 
@@ -33,9 +33,8 @@ export default function HomePage() {
         </h1>
 
         <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-400">
-          Nimbus monitors deployed applications, verifies
-          releases, detects outages, and helps restore the
-          last healthy version.
+          Nimbus monitors deployed applications, verifies releases, detects
+          outages, and helps restore the last healthy version.
         </p>
 
         <div className="mt-10 flex gap-4">
