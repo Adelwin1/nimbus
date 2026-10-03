@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/apps/app-123/deployments/new",
   useParams: () => ({
     id: "app-123",
   }),

@@ -9,7 +9,12 @@ import { HealthPanel } from "@/components/health/HealthPanel";
 import { DeploymentPanel } from "@/components/deployment/DeploymentPanel";
 import { IncidentPanel } from "@/components/incident/IncidentPanel";
 import { getApplication } from "@/lib/api";
-import type { Application, ApplicationStatus } from "@/types/application";
+import {
+  ConsoleShell,
+  Status,
+  consoleButton,
+} from "@/components/console/ConsoleShell";
+import type { Application } from "@/types/application";
 
 export default function ApplicationOverviewPage() {
   return (
@@ -60,30 +65,14 @@ function ApplicationOverviewContent() {
   }, [applicationID]);
 
   return (
-    <main id="main-content" className="min-h-screen bg-slate-950 text-white">
-      <header className="border-b border-slate-800 bg-slate-900">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <div>
-            <Link
-              href="/dashboard"
-              className="text-xl font-semibold text-white"
-            >
-              Nimbus
-            </Link>
-
-            <p className="text-sm text-slate-400">Application overview</p>
-          </div>
-
-          <Link
-            href="/apps"
-            className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-200 transition hover:border-slate-500 hover:text-white"
-          >
-            All applications
-          </Link>
-        </div>
-      </header>
-
-      <div className="mx-auto max-w-7xl px-6 py-10">
+    <ConsoleShell
+      actions={
+        <Link href="/apps" className={consoleButton}>
+          All applications
+        </Link>
+      }
+    >
+      <div>
         {loading ? (
           <LoadingState />
         ) : error || !application ? (
@@ -92,7 +81,7 @@ function ApplicationOverviewContent() {
           <ApplicationOverview application={application} />
         )}
       </div>
-    </main>
+    </ConsoleShell>
   );
 }
 
@@ -102,9 +91,11 @@ function ApplicationOverview({ application }: { application: Application }) {
       <div className="flex flex-col justify-between gap-6 md:flex-row md:items-start">
         <div>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-3xl font-bold">{application.name}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              {application.name}
+            </h1>
 
-            <StatusBadge status={application.status} />
+            <Status value={application.status} />
           </div>
 
           <p className="mt-2 capitalize text-slate-400">
@@ -118,13 +109,13 @@ function ApplicationOverview({ application }: { application: Application }) {
 
         <Link
           href={`/apps/${application.id}/settings`}
-          className="rounded-xl bg-sky-500 px-5 py-3 text-center font-medium text-slate-950 transition hover:bg-sky-400"
+          className={consoleButton}
         >
           Application settings
         </Link>
       </div>
 
-      <div className="mt-10 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
           label="Current status"
           value={capitalize(application.status)}
@@ -153,7 +144,7 @@ function ApplicationOverview({ application }: { application: Application }) {
       <IncidentPanel applicationId={application.id} />
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+        <section className="rounded-md border border-white/10 bg-[#0d1117] p-6">
           <h2 className="text-lg font-semibold">Application endpoints</h2>
 
           <div className="mt-6 space-y-5">
@@ -168,7 +159,7 @@ function ApplicationOverview({ application }: { application: Application }) {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+        <section className="rounded-md border border-white/10 bg-[#0d1117] p-6">
           <h2 className="text-lg font-semibold">Monitoring configuration</h2>
 
           <div className="mt-6 space-y-4">
@@ -194,7 +185,7 @@ function ApplicationOverview({ application }: { application: Application }) {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6 lg:col-span-2">
+        <section className="rounded-md border border-white/10 bg-[#0d1117] p-6 lg:col-span-2">
           <h2 className="text-lg font-semibold">
             Encrypted webhook configuration
           </h2>
@@ -227,7 +218,7 @@ function ApplicationOverview({ application }: { application: Application }) {
 
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+    <div className="rounded-md border border-white/10 bg-[#0d1117] p-5">
       <p className="text-sm text-slate-400">{label}</p>
       <p className="mt-2 text-xl font-semibold text-white">{value}</p>
     </div>
@@ -244,7 +235,7 @@ function URLRow({ label, value }: { label: string; value: string | null }) {
           href={value}
           target="_blank"
           rel="noreferrer"
-          className="mt-1 block break-all text-sm text-sky-400 hover:text-sky-300"
+          className="mt-1 block break-all text-sm text-teal-300 hover:text-teal-200"
         >
           {value}
         </a>
@@ -257,7 +248,7 @@ function URLRow({ label, value }: { label: string; value: string | null }) {
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-6 border-b border-slate-800 pb-4 last:border-0 last:pb-0">
+    <div className="flex items-center justify-between gap-6 border-b border-white/10 pb-4 last:border-0 last:pb-0">
       <span className="text-sm text-slate-400">{label}</span>
       <span className="text-right text-sm text-slate-100">{value}</span>
     </div>
@@ -272,7 +263,7 @@ function SecretStatus({
   configured: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+    <div className="rounded-md border border-white/10 bg-[#090c10] p-4">
       <p className="text-sm text-slate-400">{label}</p>
 
       <p
@@ -286,27 +277,9 @@ function SecretStatus({
   );
 }
 
-function StatusBadge({ status }: { status: ApplicationStatus }) {
-  const styles: Record<ApplicationStatus, string> = {
-    healthy: "border-emerald-800 bg-emerald-950 text-emerald-300",
-    degraded: "border-amber-800 bg-amber-950 text-amber-300",
-    down: "border-red-800 bg-red-950 text-red-300",
-    deploying: "border-blue-800 bg-blue-950 text-blue-300",
-    unknown: "border-slate-700 bg-slate-800 text-slate-300",
-  };
-
-  return (
-    <span
-      className={`rounded-full border px-3 py-1 text-xs font-medium capitalize ${styles[status]}`}
-    >
-      {status}
-    </span>
-  );
-}
-
 function LoadingState() {
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900 px-6 py-16 text-center text-slate-400">
+    <div className="rounded-md border border-white/10 bg-[#0d1117] px-6 py-16 text-center text-slate-400">
       Loading application...
     </div>
   );
@@ -314,7 +287,7 @@ function LoadingState() {
 
 function ErrorState({ message }: { message: string }) {
   return (
-    <div className="rounded-2xl border border-red-900 bg-red-950/40 px-6 py-5 text-red-300">
+    <div className="rounded-md border border-red-900 bg-red-950/40 px-6 py-5 text-red-300">
       {message}
     </div>
   );

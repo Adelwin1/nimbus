@@ -39,5 +39,7 @@ func Routes(
 		handler.Rollback,
 	)
 
+	router.Post("/{incidentID}/notes", handler.AddNote)
+
 	return router
 }

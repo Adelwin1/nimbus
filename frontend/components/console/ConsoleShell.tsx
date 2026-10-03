@@ -22,6 +22,8 @@ export function ConsoleShell({
         ["Overview", "/dashboard"],
         ["Applications", "/apps"],
         ["Incidents", "/incidents"],
+        ["Projects", "/projects"],
+        ["Alerts", "/alerts"],
       ];
   return (
     <div className="nimbus-console min-h-screen bg-[#090c10] text-slate-200">

@@ -63,8 +63,8 @@ export function IncidentPanel({ applicationId }: { applicationId: string }) {
   ).length;
 
   return (
-    <section className="mt-8 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">
-      <div className="flex flex-col justify-between gap-5 border-b border-slate-800 p-6 md:flex-row md:items-center">
+    <section className="mt-8 overflow-hidden rounded-md border border-white/10 bg-[#0d1117]">
+      <div className="flex flex-col justify-between gap-5 border-b border-white/10 p-6 md:flex-row md:items-center">
         <div>
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-xl font-semibold text-white">Incidents</h2>
@@ -92,7 +92,7 @@ export function IncidentPanel({ applicationId }: { applicationId: string }) {
 
         <Link
           href="/incidents"
-          className="rounded-xl border border-slate-700 px-4 py-2.5 text-center text-sm font-medium text-slate-200 transition hover:bg-slate-800"
+          className="rounded-md border border-slate-700 px-4 py-2.5 text-center text-sm font-medium text-slate-200 transition hover:bg-slate-800"
         >
           View all incidents
         </Link>

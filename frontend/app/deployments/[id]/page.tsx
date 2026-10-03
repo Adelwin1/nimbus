@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
+import { ConsoleShell } from "@/components/console/ConsoleShell";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { DeploymentStatusBadge } from "@/components/deployment/DeploymentStatusBadge";
+import { GitHubReleaseLinks } from "@/components/deployment/GitHubReleaseLinks";
 import { DeploymentTimeline } from "@/components/deployment/DeploymentTimeline";
 import { getDeploymentDetail } from "@/lib/api";
 import { subscribeToApplicationEvents } from "@/lib/live-events";
@@ -89,46 +91,37 @@ function DeploymentDetail() {
 
   if (loading) {
     return (
-      <main
-        id="main-content"
-        className="min-h-screen bg-slate-950 px-5 py-20 text-center text-slate-400"
-      >
+      <ConsoleShell>
         Loading deployment...
-      </main>
+      </ConsoleShell>
     );
   }
 
   if (!detail) {
     return (
-      <main
-        id="main-content"
-        className="min-h-screen bg-slate-950 px-5 py-20 text-center"
-      >
+      <ConsoleShell>
         <p className="text-red-300">{error || "Deployment not found."}</p>
-      </main>
+      </ConsoleShell>
     );
   }
 
   const { deployment, events } = detail;
 
   return (
-    <main
-      id="main-content"
-      className="min-h-screen bg-slate-950 px-5 py-10 text-slate-100"
-    >
+    <ConsoleShell>
       <div className="mx-auto max-w-6xl">
         <Link
           href={`/apps/${deployment.application_id}/deployments`}
-          className="text-sm font-medium text-sky-400 hover:text-sky-300"
+          className="text-sm font-medium text-teal-300 hover:text-teal-200"
         >
           ← Deployment history
         </Link>
 
-        <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-6">
+        <div className="mt-6 rounded-md border border-white/10 bg-[#0d1117] p-6">
           <div className="flex flex-col justify-between gap-5 md:flex-row md:items-start">
             <div>
               <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-3xl font-bold text-white">
+                <h1 className="text-2xl font-semibold tracking-tight text-white">
                   {deployment.version}
                 </h1>
 
@@ -154,14 +147,14 @@ function DeploymentDetail() {
 
             <Link
               href={`/apps/${deployment.application_id}`}
-              className="rounded-xl border border-slate-700 px-4 py-2.5 text-center text-sm font-medium text-slate-200 transition hover:bg-slate-800"
+              className="rounded-md border border-slate-700 px-4 py-2.5 text-center text-sm font-medium text-slate-200 transition hover:bg-slate-800"
             >
               View application
             </Link>
           </div>
 
           {error ? (
-            <div className="mt-6 rounded-xl border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-300">
+            <div className="mt-6 rounded-md border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-300">
               {error}
             </div>
           ) : null}
@@ -197,7 +190,9 @@ function DeploymentDetail() {
             />
           </div>
 
-          <div className="mt-8 border-t border-slate-800 pt-6">
+          <GitHubReleaseLinks key={deployment.id} deployment={deployment} />
+
+          <div className="mt-8 border-t border-white/10 pt-6">
             <h2 className="font-semibold text-white">Release notes</h2>
 
             <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-400">
@@ -210,7 +205,7 @@ function DeploymentDetail() {
           <DeploymentTimeline events={events} />
         </div>
       </div>
-    </main>
+    </ConsoleShell>
   );
 }
 
@@ -224,7 +219,7 @@ function DetailCard({
   monospace?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+    <div className="rounded-md border border-white/10 bg-[#090c10] p-4">
       <p className="text-xs uppercase tracking-wider text-slate-500">{label}</p>
 
       <p

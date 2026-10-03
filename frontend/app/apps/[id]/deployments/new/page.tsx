@@ -1,5 +1,6 @@
 "use client";
 
+import { ConsoleShell } from "@/components/console/ConsoleShell";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
@@ -75,24 +76,21 @@ function NewDeploymentForm() {
   }
 
   return (
-    <main
-      id="main-content"
-      className="min-h-screen bg-slate-950 px-5 py-10 text-slate-100"
-    >
+    <ConsoleShell>
       <div className="mx-auto max-w-3xl">
         <Link
           href={`/apps/${applicationId}`}
-          className="text-sm font-medium text-sky-400 hover:text-sky-300"
+          className="text-sm font-medium text-teal-300 hover:text-teal-200"
         >
           ← Back to application
         </Link>
 
         <div className="mt-6">
-          <p className="text-sm font-semibold uppercase tracking-wider text-sky-400">
+          <p className="text-sm font-semibold uppercase tracking-wider text-teal-300">
             Release
           </p>
 
-          <h1 className="mt-2 text-3xl font-bold text-white">
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white">
             Create deployment
           </h1>
 
@@ -105,13 +103,13 @@ function NewDeploymentForm() {
         <form
           noValidate
           onSubmit={handleSubmit}
-          className="mt-8 space-y-6 rounded-2xl border border-slate-800 bg-slate-900 p-6"
+          className="mt-8 space-y-6 rounded-md border border-white/10 bg-[#0d1117] p-6"
         >
           {error ? (
             <div
               role="alert"
               aria-live="polite"
-              className="rounded-xl border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-300"
+              className="rounded-md border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-300"
             >
               {error}
             </div>
@@ -126,7 +124,7 @@ function NewDeploymentForm() {
               placeholder="v1.4.0"
               maxLength={100}
               required
-              className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-sky-500"
+              className="mt-2 w-full rounded-md border border-slate-700 bg-[#090c10] px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-teal-400"
             />
           </label>
 
@@ -145,7 +143,7 @@ function NewDeploymentForm() {
               aria-describedby="deployment-commit-sha-help"
               placeholder="a3c9f24"
               maxLength={100}
-              className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 font-mono text-white outline-none transition placeholder:text-slate-600 focus:border-sky-500"
+              className="mt-2 w-full rounded-md border border-slate-700 bg-[#090c10] px-4 py-3 font-mono text-white outline-none transition placeholder:text-slate-600 focus:border-teal-400"
             />
 
             <span
@@ -167,14 +165,14 @@ function NewDeploymentForm() {
               placeholder="Describe the changes in this release..."
               rows={8}
               maxLength={10000}
-              className="mt-2 w-full resize-y rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-sky-500"
+              className="mt-2 w-full resize-y rounded-md border border-slate-700 bg-[#090c10] px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-teal-400"
             />
           </label>
 
-          <div className="flex flex-col-reverse gap-3 border-t border-slate-800 pt-6 sm:flex-row sm:justify-end">
+          <div className="flex flex-col-reverse gap-3 border-t border-white/10 pt-6 sm:flex-row sm:justify-end">
             <Link
               href={`/apps/${applicationId}`}
-              className="rounded-xl border border-slate-700 px-5 py-3 text-center font-medium text-slate-200 transition hover:bg-slate-800"
+              className="rounded-md border border-slate-700 px-5 py-3 text-center font-medium text-slate-200 transition hover:bg-slate-800"
             >
               Cancel
             </Link>
@@ -183,13 +181,13 @@ function NewDeploymentForm() {
               type="submit"
               disabled={submitting}
               aria-busy={submitting}
-              className="rounded-xl bg-sky-500 px-5 py-3 font-semibold text-slate-950 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-md bg-teal-400 px-5 py-3 font-semibold text-slate-950 transition hover:bg-teal-300 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? "Starting deployment..." : "Deploy release"}
             </button>
           </div>
         </form>
       </div>
-    </main>
+    </ConsoleShell>
   );
 }

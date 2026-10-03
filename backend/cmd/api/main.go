@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/adel/nimbus/backend/internal/activity"
+	"github.com/adel/nimbus/backend/internal/alerts"
 	"github.com/adel/nimbus/backend/internal/application"
 	"github.com/adel/nimbus/backend/internal/auth"
 	"github.com/adel/nimbus/backend/internal/config"
@@ -23,6 +24,8 @@ import (
 	"github.com/adel/nimbus/backend/internal/live"
 	appmiddleware "github.com/adel/nimbus/backend/internal/middleware"
 	"github.com/adel/nimbus/backend/internal/monitoring"
+	"github.com/adel/nimbus/backend/internal/projects"
+	"github.com/adel/nimbus/backend/internal/publicstatus"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -179,9 +182,29 @@ func main() {
 		),
 	)
 
+	ps := &publicstatus.Handler{DB: db}
+	router.Get("/api/v1/status/{slug}", ps.Public)
+
+	projectsHandler := &projects.Handler{DB: db}
+	router.Route("/api/v1/projects", func(p chi.Router) {
+		p.Use(appmiddleware.Authenticate(authService))
+		p.Get("/", projectsHandler.List)
+		p.Put("/apps/{appID}", projectsHandler.Save)
+	})
+
+	alertHandler := &alerts.Handler{DB: db}
+	router.Route("/api/v1/alerts", func(p chi.Router) {
+		p.Use(appmiddleware.Authenticate(authService))
+		p.Get("/", alertHandler.Inbox)
+		p.Get("/rules", alertHandler.Rules)
+		p.Put("/rules/{appID}", alertHandler.Rules)
+	})
+
 	router.Route("/api/v1/apps", func(protected chi.Router) {
 		protected.Use(appmiddleware.Authenticate(authService))
 
+		protected.Get("/{appID}/publication", ps.Settings)
+		protected.Put("/{appID}/publication", ps.Settings)
 		protected.Post("/", applicationHandler.Create)
 		protected.Get("/", applicationHandler.List)
 		protected.Get("/{appID}", applicationHandler.Get)

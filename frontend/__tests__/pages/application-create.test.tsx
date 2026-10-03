@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/apps/new",
   useRouter: () => ({
     push: mocks.push,
   }),

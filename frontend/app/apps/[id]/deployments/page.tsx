@@ -1,5 +1,6 @@
 "use client";
 
+import { ConsoleShell } from "@/components/console/ConsoleShell";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -65,14 +66,11 @@ function DeploymentHistory() {
   }, [applicationId, loadDeployments]);
 
   return (
-    <main
-      id="main-content"
-      className="min-h-screen bg-slate-950 px-5 py-10 text-slate-100"
-    >
+    <ConsoleShell>
       <div className="mx-auto max-w-6xl">
         <Link
           href={`/apps/${applicationId}`}
-          className="text-sm font-medium text-sky-400 hover:text-sky-300"
+          className="text-sm font-medium text-teal-300 hover:text-teal-200"
         >
           ← Back to application
         </Link>
@@ -80,7 +78,7 @@ function DeploymentHistory() {
         <div className="mt-6 flex flex-col justify-between gap-5 md:flex-row md:items-end">
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold text-white">
+              <h1 className="text-2xl font-semibold tracking-tight text-white">
                 Deployment history
               </h1>
 
@@ -88,7 +86,7 @@ function DeploymentHistory() {
                 className={`rounded-full border px-3 py-1 text-xs ${
                   live
                     ? "border-emerald-800 bg-emerald-950 text-emerald-300"
-                    : "border-slate-700 bg-slate-900 text-slate-400"
+                    : "border-slate-700 bg-[#0d1117] text-slate-400"
                 }`}
               >
                 {live ? "Live updates" : "Connecting"}
@@ -102,19 +100,19 @@ function DeploymentHistory() {
 
           <Link
             href={`/apps/${applicationId}/deployments/new`}
-            className="rounded-xl bg-sky-500 px-5 py-3 text-center font-semibold text-slate-950 transition hover:bg-sky-400"
+            className="rounded-md bg-teal-400 px-5 py-3 text-center font-semibold text-slate-950 transition hover:bg-teal-300"
           >
             New deployment
           </Link>
         </div>
 
         {error ? (
-          <div className="mt-8 rounded-xl border border-red-900 bg-red-950/40 px-5 py-4 text-sm text-red-300">
+          <div className="mt-8 rounded-md border border-red-900 bg-red-950/40 px-5 py-4 text-sm text-red-300">
             {error}
           </div>
         ) : null}
 
-        <div className="mt-8 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">
+        <div className="mt-8 overflow-hidden rounded-md border border-white/10 bg-[#0d1117]">
           {loading ? (
             <div className="px-6 py-16 text-center text-slate-400">
               Loading deployment history...
@@ -176,7 +174,7 @@ function DeploymentHistory() {
           )}
         </div>
       </div>
-    </main>
+    </ConsoleShell>
   );
 }
 

@@ -10,7 +10,7 @@ const statusStyles: Record<DeploymentStatus, string> = {
   verifying: "border-amber-800 bg-amber-950 text-amber-300",
   successful: "border-emerald-800 bg-emerald-950 text-emerald-300",
   failed: "border-red-800 bg-red-950 text-red-300",
-  cancelled: "border-slate-700 bg-slate-900 text-slate-400",
+  cancelled: "border-slate-700 bg-[#0d1117] text-slate-400",
 };
 
 export function DeploymentStatusBadge({ status }: DeploymentStatusBadgeProps) {

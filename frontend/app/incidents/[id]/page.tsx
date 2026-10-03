@@ -4,11 +4,13 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
+import { ConsoleShell } from "@/components/console/ConsoleShell";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import {
   IncidentSeverityBadge,
   IncidentStatusBadge,
 } from "@/components/incident/IncidentBadges";
+import { IncidentNotes } from "@/components/incident/IncidentNotes";
 import { IncidentTimeline } from "@/components/incident/IncidentTimeline";
 import { RollbackDialog } from "@/components/incident/RollbackDialog";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -161,23 +163,17 @@ function IncidentDetail() {
 
   if (loading) {
     return (
-      <main
-        id="main-content"
-        className="min-h-screen bg-slate-950 px-5 py-20 text-center text-slate-400"
-      >
+      <ConsoleShell>
         Loading incident...
-      </main>
+      </ConsoleShell>
     );
   }
 
   if (!detail) {
     return (
-      <main
-        id="main-content"
-        className="min-h-screen bg-slate-950 px-5 py-20 text-center"
-      >
+      <ConsoleShell>
         <p className="text-red-300">{error || "Incident not found."}</p>
-      </main>
+      </ConsoleShell>
     );
   }
 
@@ -185,19 +181,16 @@ function IncidentDetail() {
   const active = incident.status !== "resolved";
 
   return (
-    <main
-      id="main-content"
-      className="min-h-screen bg-slate-950 px-5 py-10 text-slate-100"
-    >
+    <ConsoleShell>
       <div className="mx-auto max-w-6xl">
         <Link
           href="/incidents"
-          className="text-sm font-medium text-sky-400 hover:text-sky-300"
+          className="text-sm font-medium text-teal-300 hover:text-teal-200"
         >
           ← All incidents
         </Link>
 
-        <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-6">
+        <section className="mt-6 rounded-md border border-white/10 bg-[#0d1117] p-6">
           <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-start">
             <div className="max-w-3xl">
               <div className="flex flex-wrap items-center gap-3">
@@ -216,7 +209,7 @@ function IncidentDetail() {
                 </span>
               </div>
 
-              <h1 className="mt-4 text-3xl font-bold text-white">
+              <h1 className="mt-4 text-2xl font-semibold tracking-tight text-white">
                 {incident.title}
               </h1>
 
@@ -232,7 +225,7 @@ function IncidentDetail() {
                   onClick={handleAcknowledge}
                   disabled={action !== null}
                   aria-busy={action !== null}
-                  className="rounded-xl border border-amber-700 px-4 py-2.5 text-sm font-semibold text-amber-300 transition hover:bg-amber-950 disabled:opacity-60"
+                  className="rounded-md border border-amber-700 px-4 py-2.5 text-sm font-semibold text-amber-300 transition hover:bg-amber-950 disabled:opacity-60"
                 >
                   {action === "acknowledge"
                     ? "Acknowledging..."
@@ -246,7 +239,7 @@ function IncidentDetail() {
                   onClick={() => setShowResolveConfirmation(true)}
                   disabled={action !== null}
                   aria-busy={action !== null}
-                  className="rounded-xl border border-emerald-700 px-4 py-2.5 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-950 disabled:opacity-60"
+                  className="rounded-md border border-emerald-700 px-4 py-2.5 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-950 disabled:opacity-60"
                 >
                   {action === "resolve" ? "Resolving..." : "Resolve"}
                 </button>
@@ -256,7 +249,7 @@ function IncidentDetail() {
                 <button
                   type="button"
                   onClick={() => setShowRollback(true)}
-                  className="rounded-xl bg-amber-400 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-amber-300"
+                  className="rounded-md bg-amber-400 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-amber-300"
                 >
                   Start rollback
                 </button>
@@ -268,7 +261,7 @@ function IncidentDetail() {
             <div
               role="alert"
               aria-live="polite"
-              className="mt-6 rounded-xl border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-300"
+              className="mt-6 rounded-md border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-300"
             >
               {error}
             </div>
@@ -304,7 +297,7 @@ function IncidentDetail() {
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
               href={`/apps/${incident.application_id}`}
-              className="text-sm font-medium text-sky-400 hover:text-sky-300"
+              className="text-sm font-medium text-teal-300 hover:text-teal-200"
             >
               View application
             </Link>
@@ -312,7 +305,7 @@ function IncidentDetail() {
             {incident.source_deployment_id ? (
               <Link
                 href={`/deployments/${incident.source_deployment_id}`}
-                className="text-sm font-medium text-sky-400 hover:text-sky-300"
+                className="text-sm font-medium text-teal-300 hover:text-teal-200"
               >
                 Source deployment
               </Link>
@@ -328,6 +321,8 @@ function IncidentDetail() {
             ) : null}
           </div>
         </section>
+
+        <IncidentNotes key={incident.id} incidentId={incident.id} onSaved={loadDetail} />
 
         <div className="mt-8">
           <IncidentTimeline events={events} />
@@ -359,7 +354,7 @@ function IncidentDetail() {
           }}
         />
       ) : null}
-    </main>
+    </ConsoleShell>
   );
 }
 
@@ -371,7 +366,7 @@ function safeErrorMessage(error: unknown, fallback: string): string {
 
 function InfoCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+    <div className="rounded-md border border-white/10 bg-[#090c10] p-4">
       <p className="text-xs uppercase tracking-wider text-slate-500">{label}</p>
 
       <p className="mt-2 text-sm text-slate-200">{value}</p>

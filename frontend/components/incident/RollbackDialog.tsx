@@ -44,12 +44,12 @@ export function RollbackDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-5 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#090c10]/80 px-5 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="rollback-title"
     >
-      <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+      <div className="w-full max-w-lg rounded-md border border-slate-700 bg-[#0d1117] p-6 shadow-2xl">
         <p className="text-sm font-semibold uppercase tracking-wider text-amber-400">
           Recovery action
         </p>
@@ -64,7 +64,7 @@ export function RollbackDialog({
           checks before resolving this incident.
         </p>
 
-        <div className="mt-5 rounded-xl border border-slate-800 bg-slate-950 p-4">
+        <div className="mt-5 rounded-md border border-white/10 bg-[#090c10] p-4">
           <p className="text-sm font-medium text-slate-200">{incident.title}</p>
 
           <p className="mt-2 text-xs text-slate-500">
@@ -77,7 +77,7 @@ export function RollbackDialog({
           <div
             role="alert"
             aria-live="polite"
-            className="mt-5 rounded-xl border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-300"
+            className="mt-5 rounded-md border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-300"
           >
             {error}
           </div>
@@ -89,7 +89,7 @@ export function RollbackDialog({
             onClick={onClose}
             disabled={submitting}
             aria-busy={submitting}
-            className="rounded-xl border border-slate-700 px-5 py-3 font-medium text-slate-200 transition hover:bg-slate-800 disabled:opacity-60"
+            className="rounded-md border border-slate-700 px-5 py-3 font-medium text-slate-200 transition hover:bg-slate-800 disabled:opacity-60"
           >
             Cancel
           </button>
@@ -99,7 +99,7 @@ export function RollbackDialog({
             onClick={handleRollback}
             disabled={submitting}
             aria-busy={submitting}
-            className="rounded-xl bg-amber-400 px-5 py-3 font-semibold text-slate-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-md bg-amber-400 px-5 py-3 font-semibold text-slate-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? "Starting rollback..." : "Start rollback"}
           </button>

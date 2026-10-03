@@ -67,10 +67,10 @@ export default function RegisterPage() {
   return (
     <main
       id="main-content"
-      className="flex min-h-screen items-center justify-center bg-slate-950 px-6 py-12 text-white"
+      className="flex min-h-screen items-center justify-center bg-[#090c10] px-6 py-12 text-white"
     >
-      <section className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-8">
-        <Link href="/" className="text-sm font-semibold text-sky-400">
+      <section className="w-full max-w-md rounded-md border border-white/10 bg-[#0d1117] p-8">
+        <Link href="/" className="text-sm font-semibold text-teal-300">
           Nimbus
         </Link>
 
@@ -122,7 +122,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full rounded-lg bg-sky-500 px-4 py-3 font-semibold transition hover:bg-sky-400 disabled:opacity-60"
+            className="w-full rounded-lg bg-teal-400 px-4 py-3 font-semibold transition hover:bg-teal-300 disabled:opacity-60"
           >
             {isSubmitting ? "Creating account..." : "Create account"}
           </button>
@@ -130,7 +130,7 @@ export default function RegisterPage() {
 
         <p className="mt-6 text-center text-sm text-slate-400">
           Already have an account?{" "}
-          <Link href="/login" className="font-semibold text-sky-400">
+          <Link href="/login" className="font-semibold text-teal-300">
             Sign in
           </Link>
         </p>
@@ -154,7 +154,7 @@ function Field({ label, type, error, registration }: FieldProps) {
       <input
         type={type}
         {...registration}
-        className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 outline-none focus:border-sky-500"
+        className="w-full rounded-lg border border-slate-700 bg-[#090c10] px-4 py-3 outline-none focus:border-teal-400"
       />
 
       {error ? (

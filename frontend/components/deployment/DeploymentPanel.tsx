@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+import { DeploymentComparison } from "@/components/deployment/DeploymentComparison";
 import { DeploymentStatusBadge } from "@/components/deployment/DeploymentStatusBadge";
 import { getDeployments } from "@/lib/api";
 import { subscribeToApplicationEvents } from "@/lib/live-events";
@@ -62,8 +63,8 @@ export function DeploymentPanel({ applicationId }: DeploymentPanelProps) {
   const recentDeployments = deployments.slice(0, 3);
 
   return (
-    <section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900">
-      <div className="flex flex-col justify-between gap-5 border-b border-slate-800 p-6 md:flex-row md:items-center">
+    <section className="mt-8 rounded-md border border-white/10 bg-[#0d1117]">
+      <div className="flex flex-col justify-between gap-5 border-b border-white/10 p-6 md:flex-row md:items-center">
         <div>
           <div className="flex items-center gap-3">
             <h2 className="text-xl font-semibold text-white">Deployments</h2>
@@ -93,14 +94,14 @@ export function DeploymentPanel({ applicationId }: DeploymentPanelProps) {
         <div className="flex flex-wrap gap-3">
           <Link
             href={`/apps/${applicationId}/deployments`}
-            className="rounded-xl border border-slate-700 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
+            className="rounded-md border border-slate-700 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
           >
             View history
           </Link>
 
           <Link
             href={`/apps/${applicationId}/deployments/new`}
-            className="rounded-xl bg-sky-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-sky-400"
+            className="rounded-md bg-teal-400 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-teal-300"
           >
             New deployment
           </Link>
@@ -156,6 +157,7 @@ export function DeploymentPanel({ applicationId }: DeploymentPanelProps) {
           ))}
         </div>
       )}
+      {!loading && !error ? <DeploymentComparison deployments={deployments} /> : null}
     </section>
   );
 }

@@ -104,13 +104,13 @@ export function ApplicationForm({
         <div
           role="alert"
           aria-live="polite"
-          className="rounded-xl border border-red-900 bg-red-950/50 px-4 py-3 text-sm text-red-300"
+          className="rounded-md border border-red-900 bg-red-950/50 px-4 py-3 text-sm text-red-300"
         >
           {error}
         </div>
       ) : null}
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+      <section className="rounded-md border border-white/10 bg-[#0d1117] p-6">
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-white">
             Application details
@@ -184,7 +184,7 @@ export function ApplicationForm({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+      <section className="rounded-md border border-white/10 bg-[#0d1117] p-6">
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-white">Monitoring URLs</h2>
           <p className="mt-1 text-sm text-slate-400">
@@ -217,7 +217,7 @@ export function ApplicationForm({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+      <section className="rounded-md border border-white/10 bg-[#0d1117] p-6">
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-white">
             Monitoring thresholds
@@ -273,7 +273,7 @@ export function ApplicationForm({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+      <section className="rounded-md border border-white/10 bg-[#0d1117] p-6">
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-white">
             Webhook configuration
@@ -331,7 +331,7 @@ export function ApplicationForm({
           type="submit"
           disabled={submitting}
           aria-busy={submitting}
-          className="rounded-xl bg-sky-500 px-6 py-3 font-medium text-slate-950 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-md bg-teal-400 px-6 py-3 font-medium text-slate-950 transition hover:bg-teal-300 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {submitting ? "Saving..." : submitLabel}
         </button>
@@ -353,7 +353,7 @@ function Field({
     <label className="block">
       <span className="mb-2 block text-sm font-medium text-slate-200">
         {label}
-        {required ? <span className="ml-1 text-sky-400">*</span> : null}
+        {required ? <span className="ml-1 text-teal-300">*</span> : null}
       </span>
 
       {children}
@@ -428,4 +428,4 @@ function emptyToNull(value: string): string | null {
 }
 
 const inputClassName =
-  "w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20";
+  "w-full rounded-md border border-slate-700 bg-[#090c10] px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20";

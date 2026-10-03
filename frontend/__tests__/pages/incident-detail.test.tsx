@@ -25,6 +25,7 @@ vi.mock("@/components/ui/ToastProvider", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/incidents/incident-123",
   useParams: () => ({
     id: "incident-123",
   }),

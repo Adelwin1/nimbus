@@ -91,7 +91,7 @@ export function HealthPanel({ applicationId }: HealthPanelProps) {
 
   if (loading) {
     return (
-      <section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 px-6 py-16 text-center text-slate-400">
+      <section className="mt-8 rounded-md border border-white/10 bg-[#0d1117] px-6 py-16 text-center text-slate-400">
         Loading health information...
       </section>
     );
@@ -99,9 +99,9 @@ export function HealthPanel({ applicationId }: HealthPanelProps) {
 
   return (
     <section className="mt-8 space-y-6">
-      <div className="flex flex-col justify-between gap-5 rounded-2xl border border-slate-800 bg-slate-900 p-6 md:flex-row md:items-center">
+      <div className="flex flex-col justify-between gap-5 rounded-md border border-white/10 bg-[#0d1117] p-6 md:flex-row md:items-center">
         <div>
-          <p className="text-sm font-medium uppercase tracking-wider text-sky-400">
+          <p className="text-sm font-medium uppercase tracking-wider text-teal-300">
             Real monitoring
           </p>
 
@@ -118,14 +118,14 @@ export function HealthPanel({ applicationId }: HealthPanelProps) {
           type="button"
           onClick={handleCheckNow}
           disabled={checking}
-          className="rounded-xl bg-sky-500 px-5 py-3 font-medium text-slate-950 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-md bg-sky-500 px-5 py-3 font-medium text-slate-950 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {checking ? "Checking..." : "Check now"}
         </button>
       </div>
 
       {error ? (
-        <div className="rounded-xl border border-red-900 bg-red-950/40 px-5 py-4 text-sm text-red-300">
+        <div className="rounded-md border border-red-900 bg-red-950/40 px-5 py-4 text-sm text-red-300">
           {error}
         </div>
       ) : null}
@@ -135,7 +135,7 @@ export function HealthPanel({ applicationId }: HealthPanelProps) {
           <HealthSummaryCards overview={overview} />
 
           <div className="grid gap-6 xl:grid-cols-3">
-            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 xl:col-span-2">
+            <div className="rounded-md border border-white/10 bg-[#0d1117] p-6 xl:col-span-2">
               <div>
                 <h3 className="text-lg font-semibold text-white">
                   Latency history
@@ -208,7 +208,7 @@ export function HealthPanel({ applicationId }: HealthPanelProps) {
           <HealthCheckTable checks={checks} />
         </>
       ) : (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 px-6 py-14 text-center">
+        <div className="rounded-md border border-white/10 bg-[#0d1117] px-6 py-14 text-center">
           <h3 className="text-lg font-semibold">
             Health information unavailable
           </h3>
@@ -268,7 +268,7 @@ function HealthCard({
   description: string;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+    <div className="rounded-md border border-white/10 bg-[#0d1117] p-5">
       <p className="text-sm text-slate-400">{label}</p>
 
       <p className="mt-3 text-2xl font-bold text-white">{value}</p>
@@ -282,7 +282,7 @@ function AvailabilityCard({ overview }: { overview: HealthOverview }) {
   const { statistics, state } = overview;
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+    <div className="rounded-md border border-white/10 bg-[#0d1117] p-6">
       <h3 className="text-lg font-semibold text-white">Availability</h3>
 
       <p className="mt-1 text-sm text-slate-400">
@@ -290,7 +290,7 @@ function AvailabilityCard({ overview }: { overview: HealthOverview }) {
       </p>
 
       <div className="mt-8 text-center">
-        <p className="text-5xl font-bold text-sky-400">
+        <p className="text-5xl font-bold text-teal-300">
           {statistics.availability_percent.toFixed(2)}%
         </p>
 
@@ -300,7 +300,7 @@ function AvailabilityCard({ overview }: { overview: HealthOverview }) {
         </p>
       </div>
 
-      <div className="mt-8 space-y-4 border-t border-slate-800 pt-6">
+      <div className="mt-8 space-y-4 border-t border-white/10 pt-6">
         <StatRow
           label="Successful"
           value={String(statistics.successful_checks)}
@@ -329,8 +329,8 @@ function AvailabilityCard({ overview }: { overview: HealthOverview }) {
 
 function HealthCheckTable({ checks }: { checks: HealthCheck[] }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">
-      <div className="border-b border-slate-800 p-6">
+    <div className="overflow-hidden rounded-md border border-white/10 bg-[#0d1117]">
+      <div className="border-b border-white/10 p-6">
         <h3 className="text-lg font-semibold text-white">
           Health-check history
         </h3>
@@ -347,7 +347,7 @@ function HealthCheckTable({ checks }: { checks: HealthCheck[] }) {
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-800">
-            <thead className="bg-slate-950">
+            <thead className="bg-[#090c10]">
               <tr>
                 <TableHeader>Result</TableHeader>
                 <TableHeader>Status code</TableHeader>
@@ -421,7 +421,7 @@ function StatRow({ label, value }: { label: string; value: string }) {
 
 function ChartEmptyState() {
   return (
-    <div className="mt-6 flex h-80 items-center justify-center rounded-xl border border-dashed border-slate-700 bg-slate-950 text-sm text-slate-400">
+    <div className="mt-6 flex h-80 items-center justify-center rounded-md border border-dashed border-slate-700 bg-[#090c10] text-sm text-slate-400">
       Run a health check to begin the latency chart.
     </div>
   );

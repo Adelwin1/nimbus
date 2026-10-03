@@ -7,14 +7,14 @@ type DeploymentTimelineProps = {
 export function DeploymentTimeline({ events }: DeploymentTimelineProps) {
   if (events.length === 0) {
     return (
-      <div className="rounded-2xl border border-slate-800 bg-slate-900 px-6 py-12 text-center text-sm text-slate-400">
+      <div className="rounded-md border border-white/10 bg-[#0d1117] px-6 py-12 text-center text-sm text-slate-400">
         No deployment events have been recorded.
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+    <div className="rounded-md border border-white/10 bg-[#0d1117] p-6">
       <h2 className="text-xl font-semibold text-white">Deployment timeline</h2>
 
       <p className="mt-1 text-sm text-slate-400">
@@ -47,11 +47,11 @@ export function DeploymentTimeline({ events }: DeploymentTimelineProps) {
 
               {hasMetadata(event.metadata) ? (
                 <details className="mt-3">
-                  <summary className="cursor-pointer text-xs font-medium text-sky-400">
+                  <summary className="cursor-pointer text-xs font-medium text-teal-300">
                     Event details
                   </summary>
 
-                  <pre className="mt-3 overflow-x-auto rounded-xl border border-slate-800 bg-slate-950 p-4 text-xs text-slate-400">
+                  <pre className="mt-3 overflow-x-auto rounded-md border border-white/10 bg-[#090c10] p-4 text-xs text-slate-400">
                     {JSON.stringify(event.metadata, null, 2)}
                   </pre>
                 </details>

@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { ApplicationForm } from "@/components/application/ApplicationForm";
+import { ConsoleShell, consoleButton } from "@/components/console/ConsoleShell";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/ToastProvider";
@@ -70,30 +71,8 @@ function ApplicationSettingsContent() {
   }
 
   return (
-    <main id="main-content" className="min-h-screen bg-slate-950 text-white">
-      <header className="border-b border-slate-800 bg-slate-900">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-          <div>
-            <Link
-              href="/dashboard"
-              className="text-xl font-semibold text-white"
-            >
-              Nimbus
-            </Link>
-
-            <p className="text-sm text-slate-400">Application settings</p>
-          </div>
-
-          <Link
-            href={`/apps/${applicationID}`}
-            className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-200 transition hover:border-slate-500 hover:text-white"
-          >
-            Back to overview
-          </Link>
-        </div>
-      </header>
-
-      <div className="mx-auto max-w-5xl px-6 py-10">
+    <ConsoleShell actions={<Link href={`/apps/${applicationID}`} className={consoleButton}>Back to overview</Link>}>
+      <div className="max-w-5xl">
         {loading ? (
           <LoadingState />
         ) : error || !application ? (
@@ -101,11 +80,11 @@ function ApplicationSettingsContent() {
         ) : (
           <>
             <div className="mb-8">
-              <p className="text-sm font-medium uppercase tracking-wider text-sky-400">
+              <p className="text-sm font-medium uppercase tracking-wider text-teal-300">
                 Configuration
               </p>
 
-              <h1 className="mt-2 text-3xl font-bold">{application.name}</h1>
+              <h1 className="mt-2 text-2xl font-semibold tracking-tight">{application.name}</h1>
 
               <p className="mt-3 text-slate-400">
                 Update application details, monitoring thresholds, and encrypted
@@ -139,7 +118,7 @@ function ApplicationSettingsContent() {
           </>
         )}
       </div>
-    </main>
+    </ConsoleShell>
   );
 }
 
@@ -201,7 +180,7 @@ function DeleteApplicationSection({
   }
 
   return (
-    <section className="mt-10 rounded-2xl border border-red-900/80 bg-red-950/20 p-6">
+    <section className="mt-10 rounded-md border border-red-900/80 bg-red-950/20 p-6">
       <h2 className="text-lg font-semibold text-red-300">Delete application</h2>
 
       <p
@@ -216,12 +195,12 @@ function DeleteApplicationSection({
         <button
           type="button"
           onClick={() => setShowConfirmation(true)}
-          className="mt-5 rounded-xl border border-red-800 px-5 py-3 text-sm font-medium text-red-300 transition hover:bg-red-950 focus:outline-none focus:ring-2 focus:ring-red-500"
+          className="mt-5 rounded-md border border-red-800 px-5 py-3 text-sm font-medium text-red-300 transition hover:bg-red-950 focus:outline-none focus:ring-2 focus:ring-red-500"
         >
           Delete application
         </button>
       ) : (
-        <div className="mt-6 rounded-xl border border-red-900 bg-slate-950 p-5">
+        <div className="mt-6 rounded-md border border-red-900 bg-[#090c10] p-5">
           <label
             htmlFor="delete-application-confirmation"
             className="text-sm text-slate-300"
@@ -242,7 +221,7 @@ function DeleteApplicationSection({
                 ? "delete-application-error"
                 : "delete-application-description"
             }
-            className="mt-4 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none placeholder:text-slate-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
+            className="mt-4 w-full rounded-md border border-slate-700 bg-[#0d1117] px-4 py-3 text-white outline-none placeholder:text-slate-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
           />
 
           {error ? (
@@ -260,7 +239,7 @@ function DeleteApplicationSection({
               type="button"
               onClick={() => setShowDeleteDialog(true)}
               disabled={!confirmed || deleting}
-              className="rounded-xl bg-red-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-md bg-red-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Permanently delete
             </button>
@@ -274,7 +253,7 @@ function DeleteApplicationSection({
                 setError("");
               }}
               disabled={deleting}
-              className="rounded-xl border border-slate-700 px-5 py-3 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white focus:outline-none focus:ring-2 focus:ring-slate-400"
+              className="rounded-md border border-slate-700 px-5 py-3 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white focus:outline-none focus:ring-2 focus:ring-slate-400"
             >
               Cancel
             </button>
@@ -298,7 +277,7 @@ function DeleteApplicationSection({
 
 function LoadingState() {
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900 px-6 py-16 text-center text-slate-400">
+    <div className="rounded-md border border-white/10 bg-[#0d1117] px-6 py-16 text-center text-slate-400">
       Loading settings...
     </div>
   );
@@ -306,7 +285,7 @@ function LoadingState() {
 
 function ErrorState({ message }: { message: string }) {
   return (
-    <div className="rounded-2xl border border-red-900 bg-red-950/40 px-6 py-5 text-red-300">
+    <div className="rounded-md border border-red-900 bg-red-950/40 px-6 py-5 text-red-300">
       {message}
     </div>
   );
