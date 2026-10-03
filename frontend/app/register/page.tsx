@@ -60,7 +60,7 @@ export default function RegisterPage() {
         return;
       }
 
-      setServerError("Nimbus could not create your account.");
+      setServerError("Account creation is temporarily unavailable. You can explore the demo without an account.");
     }
   }
 
@@ -79,6 +79,10 @@ export default function RegisterPage() {
         <p className="mt-2 text-sm text-slate-400">
           Start monitoring your deployed applications.
         </p>
+
+        <Link href="/demo" className="mt-6 block rounded-lg border border-sky-800 bg-sky-950/40 px-4 py-3 text-center text-sm font-semibold text-sky-300 hover:bg-sky-950">
+          Explore demo — no login required
+        </Link>
 
         <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5">
           <Field

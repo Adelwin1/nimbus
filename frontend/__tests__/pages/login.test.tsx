@@ -163,7 +163,7 @@ describe("LoginPage", () => {
     );
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Nimbus could not sign you in.",
+      "Sign-in is temporarily unavailable. You can explore the demo without an account.",
     );
 
     expect(

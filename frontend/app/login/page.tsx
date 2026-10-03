@@ -46,7 +46,7 @@ export default function LoginPage() {
         return;
       }
 
-      setServerError("Nimbus could not sign you in.");
+      setServerError("Sign-in is temporarily unavailable. You can explore the demo without an account.");
     }
   }
 
@@ -65,6 +65,10 @@ export default function LoginPage() {
         <p className="mt-2 text-sm text-slate-400">
           Sign in to your reliability dashboard.
         </p>
+
+        <Link href="/demo" className="mt-6 block rounded-lg border border-sky-800 bg-sky-950/40 px-4 py-3 text-center text-sm font-semibold text-sky-300 hover:bg-sky-950">
+          Explore demo — no login required
+        </Link>
 
         <form
           noValidate

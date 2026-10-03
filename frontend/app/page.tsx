@@ -6,21 +6,9 @@ export default function HomePage() {
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-6">
         <p className="text-xl font-semibold">Nimbus</p>
 
-        <div className="flex gap-3">
-          <Link
-            href="/login"
-            className="rounded-lg px-4 py-2 text-sm font-medium text-slate-300 hover:text-white"
-          >
-            Sign in
-          </Link>
-
-          <Link
-            href="/register"
-            className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold hover:bg-sky-400"
-          >
-            Get started
-          </Link>
-        </div>
+        <Link href="/login" className="rounded-lg px-4 py-2 text-sm font-medium text-slate-300 hover:text-white">
+          Log in
+        </Link>
       </nav>
 
       <section className="mx-auto flex max-w-5xl flex-col items-center px-6 py-28 text-center">
@@ -37,21 +25,13 @@ export default function HomePage() {
           outages, and helps restore the last healthy version.
         </p>
 
-        <div className="mt-10 flex gap-4">
-          <Link
-            href="/register"
-            className="rounded-lg bg-sky-500 px-6 py-3 font-semibold hover:bg-sky-400"
-          >
-            Create account
-          </Link>
-
-          <Link
-            href="/login"
-            className="rounded-lg border border-slate-700 px-6 py-3 font-semibold hover:bg-slate-900"
-          >
-            Sign in
-          </Link>
-        </div>
+        <Link
+          href="/demo"
+          className="mt-10 rounded-xl bg-sky-500 px-10 py-5 text-xl font-semibold text-slate-950 shadow-lg shadow-sky-950 transition hover:bg-sky-400"
+        >
+          Get started
+        </Link>
+        <p className="mt-4 text-sm text-slate-400">No login required · Explore the interactive demo</p>
       </section>
     </main>
   );
