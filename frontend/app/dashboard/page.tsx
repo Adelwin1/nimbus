@@ -1,13 +1,18 @@
 "use client";
-
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import {
+  ConsoleShell,
+  Status,
+  consoleButton,
+} from "@/components/console/ConsoleShell";
+import { ReliabilityView } from "@/components/console/ReliabilityView";
 import { useAuth } from "@/contexts/AuthContext";
-import { getDashboardSummary } from "@/lib/api";
-import type { DashboardSummary } from "@/types/application";
+import { getReliabilityOverview, listApplications } from "@/lib/api";
+import type { Application } from "@/types/application";
+import type { ReliabilityOverview } from "@/types/insights";
 
 export default function DashboardPage() {
   return (
@@ -16,51 +21,52 @@ export default function DashboardPage() {
     </ProtectedRoute>
   );
 }
-
 function DashboardContent() {
+  const { logout } = useAuth();
   const router = useRouter();
-  const { user, logout } = useAuth();
-
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [apps, setApps] = useState<Application[]>([]);
+  const [analytics, setAnalytics] = useState<ReliabilityOverview | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loggingOut, setLoggingOut] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadDashboard() {
-      try {
-        const response = await getDashboardSummary();
-
-        if (!cancelled) {
-          setSummary(response.summary);
-        }
-      } catch (loadError) {
-        if (!cancelled) {
-          setError(
-            loadError instanceof Error
-              ? loadError.message
-              : "Dashboard information could not be loaded.",
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+  const [loggingOut, setLoggingOut] = useState(false);
+  const inFlight = useRef(false);
+  const load = useCallback(async (signal?: AbortSignal) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    try {
+      const [applications, overview] = await Promise.all([
+        listApplications(),
+        getReliabilityOverview(),
+      ]);
+      if (!signal?.aborted) {
+        setApps(applications.applications);
+        setAnalytics(overview);
+        setError("");
       }
+    } catch (err) {
+      if (!signal?.aborted)
+        setError(
+          err instanceof Error ? err.message : "Dashboard could not be loaded.",
+        );
+    } finally {
+      inFlight.current = false;
+      if (!signal?.aborted) setLoading(false);
     }
-
-    void loadDashboard();
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
-
-  async function handleLogout() {
+  useEffect(() => {
+    const controller = new AbortController();
+    const initial = window.setTimeout(() => void load(controller.signal), 0);
+    const interval = window.setInterval(() => {
+      if (!document.hidden) void load(controller.signal);
+    }, 15000);
+    return () => {
+      controller.abort();
+      window.clearTimeout(initial);
+      window.clearInterval(interval);
+    };
+  }, [load]);
+  async function signOut() {
     setLoggingOut(true);
-
     try {
       await logout();
       router.replace("/login");
@@ -68,174 +74,133 @@ function DashboardContent() {
       setLoggingOut(false);
     }
   }
-
   return (
-    <main id="main-content" className="min-h-screen bg-slate-950 text-white">
-      <header className="border-b border-slate-800 bg-slate-900">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <div>
-            <p className="text-xl font-semibold">Nimbus</p>
-            <p className="text-sm text-slate-400">
-              Personal Cloud Reliability Dashboard
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link
-              href="/apps"
-              className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-200 transition hover:border-slate-500 hover:text-white"
-            >
-              Applications
-            </Link>
-
-            <button
-              type="button"
-              onClick={handleLogout}
-              disabled={loggingOut}
-              className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-200 transition hover:border-slate-500 hover:text-white disabled:opacity-60"
-            >
-              {loggingOut ? "Logging out..." : "Log out"}
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <div className="mx-auto max-w-7xl px-6 py-10">
-        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-          <div>
-            <p className="text-sm font-medium uppercase tracking-wider text-sky-400">
-              Personal overview
-            </p>
-
-            <h1 className="mt-2 text-3xl font-bold">
-              Welcome back
-              {user?.name ? `, ${user.name}` : ""}
-            </h1>
-
-            <p className="mt-3 max-w-2xl text-slate-400">
-              Review the real status totals for applications registered to your
-              account.
-            </p>
-          </div>
-
-          <Link
-            href="/apps/new"
-            className="rounded-xl bg-sky-500 px-5 py-3 text-center font-medium text-slate-950 transition hover:bg-sky-400"
+    <ConsoleShell
+      actions={
+        <>
+          <button onClick={() => void load()} className={consoleButton}>
+            Refresh
+          </button>
+          <button
+            onClick={() => void signOut()}
+            disabled={loggingOut}
+            className={consoleButton}
           >
-            Add application
-          </Link>
+            {loggingOut ? "Signing out…" : "Log out"}
+          </button>
+        </>
+      }
+    >
+      <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="font-mono text-[10px] tracking-widest text-slate-500">
+            OPERATIONS / OVERVIEW
+          </p>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white">
+            Reliability overview
+          </h1>
+          <p className="mt-2 text-xs text-slate-500">
+            {analytics
+              ? `Last refreshed ${new Date(analytics.generated_at).toLocaleTimeString()} · Polls every 15s while visible`
+              : "Your monitored services, releases, and incidents."}
+          </p>
         </div>
-
-        {loading ? (
-          <div className="mt-10 rounded-2xl border border-slate-800 bg-slate-900 px-6 py-16 text-center text-slate-400">
-            Loading dashboard...
-          </div>
-        ) : error || !summary ? (
-          <div className="mt-10 rounded-2xl border border-red-900 bg-red-950/40 px-6 py-5 text-red-300">
-            {error || "Dashboard data is unavailable."}
-          </div>
-        ) : (
-          <>
-            <div className="mt-10 grid gap-5 sm:grid-cols-2 xl:grid-cols-5">
-              <SummaryCard
-                label="Total applications"
-                value={summary.total_applications}
-                description="All owned applications"
-              />
-
-              <SummaryCard
-                label="Healthy"
-                value={summary.healthy_applications}
-                description="Responding normally"
-              />
-
-              <SummaryCard
-                label="Degraded"
-                value={summary.degraded_applications}
-                description="Performance concerns"
-              />
-
-              <SummaryCard
-                label="Down"
-                value={summary.down_applications}
-                description="Currently unavailable"
-              />
-
-              <SummaryCard
-                label="Unknown"
-                value={summary.unknown_applications}
-                description="Not checked yet"
-              />
-            </div>
-
-            {summary.total_applications === 0 ? (
-              <EmptyDashboard />
-            ) : (
-              <section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6">
-                <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
-                  <div>
-                    <h2 className="text-lg font-semibold">
-                      Manage your applications
-                    </h2>
-
-                    <p className="mt-2 text-sm text-slate-400">
-                      View configuration, monitoring URLs, encrypted webhook
-                      status, and application settings.
-                    </p>
-                  </div>
-
-                  <Link
-                    href="/apps"
-                    className="rounded-xl border border-slate-700 px-5 py-3 text-center text-sm text-slate-200 transition hover:border-sky-500 hover:text-white"
-                  >
-                    View all applications
-                  </Link>
-                </div>
-              </section>
-            )}
-          </>
-        )}
+        <Link
+          href="/apps/new"
+          className="rounded-md bg-teal-400 px-4 py-2.5 text-xs font-semibold text-slate-950 hover:bg-teal-300"
+        >
+          + Add application
+        </Link>
       </div>
-    </main>
-  );
-}
-
-function SummaryCard({
-  label,
-  value,
-  description,
-}: {
-  label: string;
-  value: number;
-  description: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-      <p className="text-sm text-slate-400">{label}</p>
-
-      <p className="mt-3 text-3xl font-bold text-white">{value}</p>
-
-      <p className="mt-2 text-xs text-slate-500">{description}</p>
-    </div>
-  );
-}
-
-function EmptyDashboard() {
-  return (
-    <section className="mt-8 rounded-2xl border border-dashed border-slate-700 bg-slate-900 px-6 py-14 text-center">
-      <h2 className="text-xl font-semibold">No applications registered</h2>
-
-      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">
-        Add your first application to begin tracking real reliability and health
-        information.
-      </p>
-
-      <Link
-        href="/apps/new"
-        className="mt-6 inline-block rounded-xl bg-sky-500 px-5 py-3 font-medium text-slate-950 transition hover:bg-sky-400"
-      >
-        Add your first application
-      </Link>
-    </section>
+      {error && (
+        <p
+          role="alert"
+          className="mb-5 rounded-md border border-rose-900 bg-rose-950/30 p-4 text-sm text-rose-300"
+        >
+          {error} Previous data, if available, may be stale.
+        </p>
+      )}
+      {loading ? (
+        <p className="py-16 text-sm text-slate-500">Loading workspace…</p>
+      ) : (
+        <>
+          <section className="mb-5 overflow-hidden rounded-lg border border-white/[0.07] bg-[#0d1117]">
+            <div className="flex justify-between border-b border-white/[0.07] p-5">
+              <h2 className="text-sm font-medium">
+                Applications{" "}
+                <span className="ml-2 text-slate-500">{apps.length}</span>
+              </h2>
+              <Link
+                href="/apps"
+                className="text-xs text-slate-400 hover:text-teal-300"
+              >
+                Manage applications →
+              </Link>
+            </div>
+            {apps.length === 0 ? (
+              <div className="p-8 text-sm text-slate-500">
+                No applications yet. Add a deployed service to start collecting
+                real checks.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="text-slate-500">
+                    <tr>
+                      {[
+                        "Service",
+                        "Status",
+                        "Version",
+                        "Interval",
+                        "Last check",
+                      ].map((label) => (
+                        <th key={label} className="px-5 py-3 font-normal">
+                          {label}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {apps.map((app) => (
+                      <tr
+                        key={app.id}
+                        className="border-t border-white/[0.05] hover:bg-white/[0.02]"
+                      >
+                        <td className="px-5 py-4">
+                          <Link
+                            href={`/apps/${app.id}`}
+                            className="text-sm font-medium hover:text-teal-300"
+                          >
+                            {app.name}
+                          </Link>
+                          <p className="mt-1 text-[10px] text-slate-500">
+                            {app.environment}
+                          </p>
+                        </td>
+                        <td className="px-5 py-4">
+                          <Status value={app.status} />
+                        </td>
+                        <td className="px-5 py-4 font-mono">
+                          {app.current_version ?? "—"}
+                        </td>
+                        <td className="px-5 py-4 font-mono text-slate-400">
+                          {app.monitoring_interval_seconds}s
+                        </td>
+                        <td className="px-5 py-4 text-slate-400">
+                          {app.last_checked_at
+                            ? new Date(app.last_checked_at).toLocaleString()
+                            : "Never"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+          {analytics && <ReliabilityView data={analytics} />}
+        </>
+      )}
+    </ConsoleShell>
   );
 }

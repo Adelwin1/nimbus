@@ -19,6 +19,7 @@ import (
 	"github.com/adel/nimbus/backend/internal/database"
 	"github.com/adel/nimbus/backend/internal/deployment"
 	"github.com/adel/nimbus/backend/internal/incident"
+	"github.com/adel/nimbus/backend/internal/insights"
 	"github.com/adel/nimbus/backend/internal/live"
 	appmiddleware "github.com/adel/nimbus/backend/internal/middleware"
 	"github.com/adel/nimbus/backend/internal/monitoring"
@@ -232,6 +233,7 @@ func main() {
 
 	router.Group(func(protected chi.Router) {
 		protected.Use(appmiddleware.Authenticate(authService))
+		protected.Get("/api/v1/dashboard/analytics", insights.Handler{Store: &insights.Repository{DB: db}}.Overview)
 		protected.Get(
 			"/api/v1/dashboard",
 			applicationHandler.Dashboard,

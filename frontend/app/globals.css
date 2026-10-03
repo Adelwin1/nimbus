@@ -47,3 +47,12 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+.nimbus-console {
+  font-family: var(--font-geist-sans), Arial, sans-serif;
+  color-scheme: dark;
+}
+.nimbus-console .font-mono {
+  font-family: var(--font-geist-mono), monospace;
+  font-variant-numeric: tabular-nums;
+}

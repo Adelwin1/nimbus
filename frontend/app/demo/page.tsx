@@ -1,95 +1,579 @@
 "use client";
-
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import {
+  ConsoleShell,
+  Status,
+  consoleButton,
+} from "@/components/console/ConsoleShell";
+import { ReliabilityView } from "@/components/console/ReliabilityView";
+import type { ReliabilityOverview } from "@/types/insights";
 
-type Status = "healthy" | "down";
-type DemoApp = { id: string; name: string; description: string; version: string; status: Status; latency: number };
-type Release = { id: number; appId: string; version: string; status: "successful" | "failed"; kind: string };
-type Incident = { id: number; appId: string; status: "open" | "acknowledged" | "resolved" };
-const initialApps: DemoApp[] = [
-  { id: "store", name: "Storefront", description: "Customer web application", version: "v2.4.0", status: "healthy", latency: 84 },
-  { id: "api", name: "Payments API", description: "Payment processing service", version: "v1.8.2", status: "healthy", latency: 126 },
-  { id: "worker", name: "Background worker", description: "Asynchronous order processing", version: "v3.1.0", status: "healthy", latency: 42 },
+type App = {
+  id: string;
+  name: string;
+  description: string;
+  version: string;
+  status: "healthy" | "down";
+  latency: number;
+  interval: number;
+  threshold: number;
+};
+type Release = ReliabilityOverview["releases"][number];
+type Incident = ReliabilityOverview["incidents"][number] & {
+  appId: string;
+  resolvedAt?: number;
+};
+const sampleTime = "2026-10-03T12:00:00.000Z";
+const initialApps: App[] = [
+  {
+    id: "store",
+    name: "Storefront",
+    description: "Customer web application",
+    version: "v2.4.0",
+    status: "healthy",
+    latency: 84,
+    interval: 30,
+    threshold: 3,
+  },
+  {
+    id: "api",
+    name: "Payments API",
+    description: "Payment processing service",
+    version: "v1.8.2",
+    status: "healthy",
+    latency: 126,
+    interval: 60,
+    threshold: 3,
+  },
+  {
+    id: "worker",
+    name: "Background worker",
+    description: "Asynchronous order processing",
+    version: "v3.1.0",
+    status: "healthy",
+    latency: 42,
+    interval: 60,
+    threshold: 2,
+  },
 ];
-const initialReleases: Release[] = initialApps.map((app, index) => ({ id: index, appId: app.id, version: app.version, status: "successful", kind: "Deployment" }));
-const button = "rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium transition hover:border-sky-400 disabled:opacity-40";
+const initialReleases: Release[] = initialApps.map((app, index) => ({
+  id: `seed-${index}`,
+  application_name: app.name,
+  version: app.version,
+  previous_version: null,
+  status: "successful",
+  kind: "deployment",
+  created_at: sampleTime,
+  duration_seconds: 8 + index * 3,
+}));
+const initialHistory = Array.from({ length: 25 }, (_, index) => ({
+  time: new Date(Date.parse(sampleTime) - (24 - index) * 3600000).toISOString(),
+  checks: 120,
+  successful: index === 8 ? 116 : 120,
+  latency_ms: Math.round(
+    85 + Math.sin(index * 0.7) * 18 + (index === 8 ? 60 : 0),
+  ),
+}));
 
 export default function DemoPage() {
   const [apps, setApps] = useState(initialApps);
   const [releases, setReleases] = useState(initialReleases);
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [selected, setSelected] = useState("store");
-  const [view, setView] = useState("Applications");
+  const [view, setView] = useState("Overview");
   const [version, setVersion] = useState("v2.5.0");
   const [failRelease, setFailRelease] = useState(false);
-  const [message, setMessage] = useState("Choose an application to check its health or try a release.");
-  const [events, setEvents] = useState(["Monitoring started for three sample applications."]);
+  const [busy, setBusy] = useState(false);
+  const [stage, setStage] = useState("");
+  const [message, setMessage] = useState(
+    "Choose an application to check its health or try a release.",
+  );
+  const [events, setEvents] = useState([
+    "Monitoring started for three sample applications.",
+  ]);
+  const [history, setHistory] = useState(initialHistory);
+  const [clock, setClock] = useState(Date.parse(sampleTime));
+  const generation = useRef(0);
+  const running = useRef(false);
+  const timer = useRef<{ id: number; resolve: () => void } | null>(null);
   const app = apps.find((item) => item.id === selected)!;
-  const nameFor = (id: string) => apps.find((item) => item.id === id)?.name;
-
+  useEffect(
+    () => () => {
+      generation.current++;
+      if (timer.current) {
+        window.clearTimeout(timer.current.id);
+        timer.current.resolve();
+      }
+    },
+    [],
+  );
+  function pause() {
+    return new Promise<void>((resolve) => {
+      const id = window.setTimeout(() => {
+        timer.current = null;
+        resolve();
+      }, 650);
+      timer.current = { id, resolve };
+    });
+  }
   function record(text: string) {
     setMessage(text);
     setEvents((previous) => [text, ...previous].slice(0, 12));
   }
+  function tick() {
+    const now = Date.now();
+    setClock(now);
+    return now;
+  }
+  function addProbe(healthy: boolean) {
+    setHistory((previous) =>
+      previous.map((bucket, index) =>
+        index === previous.length - 1
+          ? {
+              ...bucket,
+              checks: bucket.checks + 1,
+              successful: bucket.successful + (healthy ? 1 : 0),
+            }
+          : bucket,
+      ),
+    );
+  }
+  function openIncident(target: App, title: string) {
+    setIncidents((previous) =>
+      previous.some(
+        (item) => item.appId === target.id && item.status !== "resolved",
+      )
+        ? previous
+        : [
+            {
+              id: crypto.randomUUID(),
+              appId: target.id,
+              application_name: target.name,
+              title,
+              status: "open",
+              severity: "critical",
+              created_at: new Date(tick()).toISOString(),
+              duration_seconds: 0,
+            },
+            ...previous,
+          ],
+    );
+  }
   function outage() {
-    if (app.status === "down") return;
-    setApps((previous) => previous.map((item) => item.id === app.id ? { ...item, status: "down" } : item));
-    setIncidents((previous) => [{ id: Date.now(), appId: app.id, status: "open" }, ...previous]);
-    record(`${app.name}: simulated health check failed. An incident was opened.`);
+    if (running.current || app.status === "down") return;
+    setApps((previous) =>
+      previous.map((item) =>
+        item.id === app.id ? { ...item, status: "down" } : item,
+      ),
+    );
+    addProbe(false);
+    openIncident(app, `${app.name} health failure`);
+    record(
+      `${app.name}: simulated health check failed. An incident was opened.`,
+    );
   }
-  function recover(appId: string) {
-    setApps((previous) => previous.map((item) => item.id === appId ? { ...item, status: "healthy" } : item));
-    setIncidents((previous) => previous.map((item) => item.appId === appId && item.status !== "resolved" ? { ...item, status: "resolved" } : item));
-    record(`${nameFor(appId)}: recovered to the last healthy version. Incident resolved.`);
+  async function recover(appId: string) {
+    if (running.current) return;
+    running.current = true;
+    setBusy(true);
+    const run = generation.current;
+    const target = apps.find((item) => item.id === appId)!;
+    setStage("Recovery / verifying");
+    record(`${target.name}: verifying the last healthy version.`);
+    await pause();
+    if (run !== generation.current) return;
+    const now = tick();
+    setApps((previous) =>
+      previous.map((item) =>
+        item.id === appId ? { ...item, status: "healthy" } : item,
+      ),
+    );
+    setIncidents((previous) =>
+      previous.map((item) =>
+        item.appId === appId && item.status !== "resolved"
+          ? { ...item, status: "resolved", resolvedAt: now }
+          : item,
+      ),
+    );
+    addProbe(true);
+    setReleases((previous) => [
+      {
+        id: crypto.randomUUID(),
+        application_name: target.name,
+        version: target.version,
+        previous_version: target.version,
+        status: "successful",
+        kind: "rollback",
+        created_at: new Date(now).toISOString(),
+        duration_seconds: 0.65,
+      },
+      ...previous,
+    ]);
+    record(
+      `${target.name}: recovered to the last healthy version. Incident resolved.`,
+    );
+    setStage("Recovery / successful");
+    setBusy(false);
+    running.current = false;
   }
-  function deploy() {
-    const nextVersion = version.trim();
-    if (!nextVersion) return;
-    setReleases((previous) => [{ id: Date.now(), appId: app.id, version: nextVersion, status: failRelease ? "failed" : "successful", kind: "Deployment" }, ...previous]);
-    if (failRelease) {
-      outage();
-      record(`${app.name}: release ${nextVersion} failed verification. Last healthy version ${app.version} retained.`);
-    } else {
-      setApps((previous) => previous.map((item) => item.id === app.id ? { ...item, version: nextVersion } : item));
-      record(`${app.name}: release ${nextVersion} passed health verification.`);
+  async function deploy() {
+    const next = version.trim();
+    if (!next || running.current || app.status === "down") return;
+    running.current = true;
+    setBusy(true);
+    const run = generation.current;
+    const id = crypto.randomUUID();
+    const started = tick();
+    const target = app;
+    const fail = failRelease;
+    setReleases((previous) => [
+      {
+        id,
+        application_name: target.name,
+        version: next,
+        previous_version: target.version,
+        status: "pending",
+        kind: "deployment",
+        created_at: new Date(started).toISOString(),
+        duration_seconds: null,
+      },
+      ...previous,
+    ]);
+    for (const status of ["pending", "triggering", "verifying"]) {
+      setStage(`Release / ${status}`);
+      setReleases((previous) =>
+        previous.map((item) => (item.id === id ? { ...item, status } : item)),
+      );
+      record(`${target.name}: release ${next} ${status}.`);
+      await pause();
+      if (run !== generation.current) return;
     }
+    const now = tick();
+    setReleases((previous) =>
+      previous.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              status: fail ? "failed" : "successful",
+              duration_seconds: (now - started) / 1000,
+            }
+          : item,
+      ),
+    );
+    if (fail) {
+      setApps((previous) =>
+        previous.map((item) =>
+          item.id === target.id ? { ...item, status: "down" } : item,
+        ),
+      );
+      addProbe(false);
+      openIncident(target, `${target.name} release verification failed`);
+      record(
+        `${target.name}: release ${next} failed verification. Last healthy version ${target.version} retained.`,
+      );
+    } else {
+      setApps((previous) =>
+        previous.map((item) =>
+          item.id === target.id ? { ...item, version: next } : item,
+        ),
+      );
+      addProbe(true);
+      record(`${target.name}: release ${next} passed health verification.`);
+    }
+    setStage(`Release / ${fail ? "failed" : "successful"}`);
+    setBusy(false);
+    running.current = false;
   }
   function reset() {
-    setApps(initialApps); setReleases(initialReleases); setIncidents([]);
-    setSelected("store"); setView("Applications"); setVersion("v2.5.0"); setFailRelease(false);
+    generation.current++;
+    if (timer.current) {
+      window.clearTimeout(timer.current.id);
+      timer.current.resolve();
+      timer.current = null;
+    }
+    running.current = false;
+    setBusy(false);
+    setStage("");
+    setApps(initialApps);
+    setReleases(initialReleases);
+    setIncidents([]);
+    setSelected("store");
+    setVersion("v2.5.0");
+    setFailRelease(false);
+    setView("Overview");
+    setHistory(initialHistory);
+    setClock(Date.parse(sampleTime));
     setEvents(["Monitoring started for three sample applications."]);
     setMessage("Demo reset. Try a health check, deployment, or outage.");
   }
-
-  return (
-    <main id="main-content" className="min-h-screen bg-slate-950 text-white">
-      <header className="border-b border-slate-800">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-5">
-          <Link href="/" className="text-xl font-semibold">Nimbus <span className="ml-2 text-xs font-normal text-sky-300">Interactive demo</span></Link>
-          <div className="flex items-center gap-4"><button className={button} onClick={reset}>Reset demo</button><Link href="/login" className="text-sm text-slate-300 hover:text-white">Log in</Link></div>
-        </div>
-      </header>
-      <div className="mx-auto max-w-7xl px-6 py-8">
-        <p className="rounded-xl border border-sky-900 bg-sky-950/40 px-5 py-3 text-sm text-sky-200">Sample workspace · No account needed. All checks, releases, and recovery actions are simulated. Refresh to reset.</p>
-        <div className="my-8"><p className="text-sm text-sky-400">Cloud reliability</p><h1 className="mt-2 text-3xl font-bold sm:text-4xl">Your applications, at a glance.</h1><p className="mt-3 text-slate-400">Explore monitoring, release verification, and incident recovery.</p></div>
-        <div className="grid gap-4 sm:grid-cols-3">
-          {[["Applications", apps.length], ["Healthy", apps.filter((item) => item.status === "healthy").length], ["Active incidents", incidents.filter((item) => item.status !== "resolved").length]].map(([label, count]) => <div key={label} className="rounded-xl border border-slate-800 bg-slate-900 p-5"><p className="text-sm text-slate-400">{label}</p><p className="mt-2 text-3xl font-semibold">{count}</p></div>)}
-        </div>
-        <nav aria-label="Demo sections" className="my-6 flex flex-wrap gap-2">{["Applications", "Deployments", "Incidents"].map((tab) => <button key={tab} aria-pressed={view === tab} onClick={() => setView(tab)} className={`${button} ${view === tab ? "bg-sky-950 text-sky-300 border-sky-700" : "text-slate-300"}`}>{tab}</button>)}</nav>
-        <p role="status" className="mb-6 rounded-lg bg-slate-900 px-4 py-3 text-sm text-sky-200">{message}</p>
-        {view === "Applications" && <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-          <section aria-label="Sample applications" className="space-y-3">{apps.map((item) => <button key={item.id} aria-pressed={selected === item.id} onClick={() => setSelected(item.id)} className={`w-full rounded-xl border p-5 text-left ${selected === item.id ? "border-sky-500 bg-sky-950/30" : "border-slate-800 bg-slate-900"}`}><div className="flex items-center justify-between gap-3"><h2 className="font-semibold">{item.name}</h2><Badge status={item.status}/></div><p className="mt-2 text-sm text-slate-400">{item.description}</p><p className="mt-3 text-xs text-slate-400">Production · {item.version} · {item.status === "healthy" ? `${item.latency} ms` : "HTTP 503"}</p></button>)}</section>
-          <section className="rounded-xl border border-slate-800 bg-slate-900 p-6"><h2 className="text-xl font-semibold">{app.name}</h2><p className="mt-2 text-sm text-slate-400">Monitoring every 30 seconds · Failure threshold: 3 checks</p><div className="my-6 flex flex-wrap gap-3"><button className={button} onClick={() => record(`${app.name}: simulated check returned HTTP ${app.status === "healthy" ? `200 in ${app.latency} ms` : "503"}.`)}>Check now</button><button className={button} disabled={app.status === "down"} onClick={outage}>Simulate outage</button>{app.status === "down" && <button className={button} onClick={() => recover(app.id)}>Recover application</button>}</div><div className="border-t border-slate-800 pt-5"><h3 className="font-semibold">Verify a release</h3><form onSubmit={(event) => { event.preventDefault(); deploy(); }} className="mt-4 space-y-4"><label className="block text-sm text-slate-300">Release version<input value={version} onChange={(event) => setVersion(event.target.value)} required maxLength={80} className="mt-2 block w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-white" /></label><label className="flex items-center gap-2 text-sm text-slate-400"><input type="checkbox" checked={failRelease} onChange={(event) => setFailRelease(event.target.checked)}/>Simulate failed verification</label><button type="submit" disabled={!version.trim() || app.status === "down"} className="rounded-lg bg-sky-500 px-5 py-3 text-sm font-semibold text-slate-950 hover:bg-sky-400 disabled:opacity-40">Deploy release</button>{app.status === "down" && <p className="text-sm text-amber-300">Recover the application before trying another release.</p>}</form></div></section>
-        </div>}
-        {view === "Deployments" && <section aria-label="Release history" className="space-y-3"><h2 className="text-xl font-semibold">Release history</h2>{releases.map((release) => <div key={release.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-5"><div><h3 className="font-semibold">{nameFor(release.appId)} · {release.version}</h3><p className="mt-1 text-sm text-slate-400">{release.kind} · {release.status === "successful" ? "Health verification passed" : "Health verification failed; previous version retained"}</p></div><Badge status={release.status}/></div>)}</section>}
-        {view === "Incidents" && <section aria-label="Incident list" className="space-y-3"><h2 className="text-xl font-semibold">Incident response</h2>{incidents.length === 0 ? <div className="rounded-xl border border-dashed border-slate-700 p-8 text-slate-400">No incidents yet. Simulate an outage in Applications to try acknowledgment and recovery.</div> : incidents.map((incident) => <div key={incident.id} className="rounded-xl border border-slate-800 bg-slate-900 p-5"><div className="flex flex-wrap justify-between gap-3"><h3 className="font-semibold">{nameFor(incident.appId)} health failure</h3><Badge status={incident.status}/></div><p className="my-3 text-sm text-slate-400">Consecutive failed checks triggered a critical incident.</p>{incident.status !== "resolved" && <div className="flex flex-wrap gap-3"><button className={button} disabled={incident.status === "acknowledged"} onClick={() => { setIncidents((previous) => previous.map((item) => item.id === incident.id ? { ...item, status: "acknowledged" } : item)); record(`${nameFor(incident.appId)}: incident acknowledged.`); }}>Acknowledge</button><button className={button} onClick={() => recover(incident.appId)}>Recover last healthy version</button></div>}</div>)}</section>}
-        <section className="mt-8 rounded-xl border border-slate-800 p-6"><h2 className="font-semibold">Activity timeline</h2><ol className="mt-4 space-y-3">{events.map((event, index) => <li key={`${index}-${event}`} className="border-l-2 border-sky-800 pl-4 text-sm text-slate-400">{event}</li>)}</ol></section>
-      </div>
-    </main>
+  const checks = history.reduce((sum, bucket) => sum + bucket.checks, 0);
+  const successful = history.reduce(
+    (sum, bucket) => sum + bucket.successful,
+    0,
   );
-}
-function Badge({ status }: { status: string }) {
-  const good = ["healthy", "successful", "resolved"].includes(status);
-  return <span className={`rounded-full px-3 py-1 text-xs font-medium ${good ? "bg-emerald-950 text-emerald-300" : "bg-amber-950 text-amber-300"}`}>{status}</span>;
+  const data: ReliabilityOverview = {
+    window_start: initialHistory[0].time,
+    generated_at: sampleTime,
+    metrics: {
+      checks,
+      successful,
+      success_percent: (100 * successful) / checks,
+      average_latency_ms:
+        history.reduce((sum, bucket) => sum + (bucket.latency_ms ?? 0), 0) /
+        history.length,
+      p95_latency_ms: 146,
+    },
+    history,
+    releases,
+    incidents: incidents.map((item) => ({
+      ...item,
+      duration_seconds: Math.max(
+        0,
+        ((item.resolvedAt ?? clock) - Date.parse(item.created_at)) / 1000,
+      ),
+    })),
+    active_incidents: incidents.filter((item) => item.status !== "resolved")
+      .length,
+  };
+  return (
+    <ConsoleShell
+      demo
+      actions={
+        <>
+          <button className={consoleButton} onClick={reset}>
+            Reset demo
+          </button>
+          <Link href="/login" className={consoleButton}>
+            Log in
+          </Link>
+        </>
+      }
+    >
+      <div className="mb-6 flex flex-wrap justify-between gap-4">
+        <div>
+          <p className="font-mono text-[10px] tracking-widest text-teal-400">
+            SANDBOX / OPERATIONS
+          </p>
+          <h1 className="mt-2 text-2xl font-semibold text-white">
+            Reliability overview
+          </h1>
+          <p className="mt-2 text-xs text-slate-500">
+            Three sample services. One place to monitor, release, and recover.
+          </p>
+        </div>
+        <span className="self-start rounded-md border border-teal-900 px-3 py-2 font-mono text-[10px] text-teal-300">
+          NO ACCOUNT REQUIRED
+        </span>
+      </div>
+      <p className="mb-5 border-l-2 border-teal-600 pl-3 text-xs leading-5 text-slate-500">
+        Interactive demo · Sample history and simulated probes. Actions stay in
+        this tab and reset on refresh.
+      </p>
+      <nav aria-label="Demo sections" className="mb-5 flex flex-wrap gap-2">
+        {["Overview", "Applications", "Deployments", "Incidents"].map((tab) => (
+          <button
+            key={tab}
+            aria-pressed={view === tab}
+            onClick={() => setView(tab)}
+            className={`${consoleButton} ${view === tab ? "!border-teal-800 !text-teal-300" : ""}`}
+          >
+            {tab}
+          </button>
+        ))}
+      </nav>
+      <p
+        role="status"
+        className="mb-5 rounded-md border border-white/[0.07] bg-[#0d1117] px-4 py-3 font-mono text-xs text-slate-400"
+      >
+        {stage && <span className="mr-3 text-teal-300">{stage}</span>}
+        {message}
+      </p>
+      {view === "Overview" && <ReliabilityView data={data} demo />}
+      {(view === "Overview" || view === "Applications") && (
+        <section className="mt-5 grid gap-5 xl:grid-cols-[1.2fr_1fr]">
+          <div className="overflow-hidden rounded-lg border border-white/[0.07] bg-[#0d1117]">
+            <div className="border-b border-white/[0.07] p-5">
+              <h2 className="text-sm font-medium">Service inventory</h2>
+              <p className="mt-1 text-xs text-slate-500">
+                Select a service to try monitoring and releases
+              </p>
+            </div>
+            {apps.map((item) => (
+              <button
+                key={item.id}
+                disabled={busy}
+                aria-pressed={selected === item.id}
+                onClick={() => setSelected(item.id)}
+                className={`flex w-full flex-wrap items-center justify-between gap-3 border-b border-white/[0.05] p-5 text-left disabled:opacity-60 ${selected === item.id ? "bg-white/[0.04]" : "hover:bg-white/[0.02]"}`}
+              >
+                <div>
+                  <p className="text-sm">{item.name}</p>
+                  <p className="mt-2 font-mono text-[10px] text-slate-500">
+                    production / {item.version} /{" "}
+                    {item.status === "healthy"
+                      ? `${item.latency}ms`
+                      : "HTTP 503"}
+                  </p>
+                </div>
+                <Status value={item.status} />
+              </button>
+            ))}
+          </div>
+          <div className="rounded-lg border border-white/[0.07] bg-[#0d1117] p-5">
+            <h2 className="text-sm font-medium">{app.name}</h2>
+            <p className="mt-2 text-xs text-slate-500">
+              Probe every {app.interval}s · Alert after {app.threshold} failed
+              probes
+            </p>
+            <div className="my-5 flex flex-wrap gap-2">
+              <button
+                className={consoleButton}
+                disabled={busy}
+                onClick={() => {
+                  addProbe(app.status === "healthy");
+                  record(
+                    `${app.name}: simulated check returned HTTP ${app.status === "healthy" ? `200 in ${app.latency} ms` : "503"}.`,
+                  );
+                }}
+              >
+                Check now
+              </button>
+              <button
+                className={consoleButton}
+                disabled={busy || app.status === "down"}
+                onClick={outage}
+              >
+                Simulate outage
+              </button>
+              {app.status === "down" && (
+                <button
+                  className={consoleButton}
+                  disabled={busy}
+                  onClick={() => void recover(app.id)}
+                >
+                  Recover application
+                </button>
+              )}
+            </div>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void deploy();
+              }}
+              className="border-t border-white/[0.07] pt-5"
+            >
+              <h3 className="text-sm font-medium">Release verification</h3>
+              <label className="mt-4 block text-xs text-slate-400">
+                Release version
+                <input
+                  required
+                  maxLength={80}
+                  disabled={busy}
+                  value={version}
+                  onChange={(event) => setVersion(event.target.value)}
+                  className="mt-2 w-full rounded-md border border-white/15 bg-[#090c10] px-3 py-2 font-mono text-sm text-white"
+                />
+              </label>
+              <label className="my-4 flex items-center gap-2 text-xs text-slate-400">
+                <input
+                  type="checkbox"
+                  disabled={busy}
+                  checked={failRelease}
+                  onChange={(event) => setFailRelease(event.target.checked)}
+                />
+                Simulate failed verification
+              </label>
+              <button
+                disabled={busy || !version.trim() || app.status === "down"}
+                type="submit"
+                className="rounded-md bg-teal-400 px-4 py-2.5 text-xs font-semibold text-slate-950 disabled:opacity-40"
+              >
+                Deploy release
+              </button>
+              {busy && <p className="mt-3 text-xs text-teal-300">{stage}…</p>}
+              {app.status === "down" && (
+                <p className="mt-3 text-xs text-amber-300">
+                  Recover the application before trying another release.
+                </p>
+              )}
+            </form>
+          </div>
+        </section>
+      )}
+      {view === "Deployments" && (
+        <ReliabilityView data={{ ...data, incidents: [] }} demo />
+      )}
+      {view === "Incidents" && (
+        <section className="space-y-3">
+          {incidents.length === 0 ? (
+            <p className="rounded-lg border border-white/10 p-8 text-sm text-slate-500">
+              No incidents yet. Simulate an outage in Applications to try
+              acknowledgment and recovery.
+            </p>
+          ) : (
+            incidents.map((incident) => (
+              <div
+                key={incident.id}
+                className="rounded-lg border border-white/10 bg-[#0d1117] p-5"
+              >
+                <div className="flex justify-between gap-3">
+                  <h2 className="text-sm">{incident.title}</h2>
+                  <Status value={incident.status} />
+                </div>
+                <p className="my-3 text-xs text-slate-500">
+                  {incident.application_name} · critical
+                </p>
+                {incident.status !== "resolved" && (
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      className={consoleButton}
+                      disabled={busy || incident.status === "acknowledged"}
+                      onClick={() => {
+                        setIncidents((previous) =>
+                          previous.map((item) =>
+                            item.id === incident.id
+                              ? { ...item, status: "acknowledged" }
+                              : item,
+                          ),
+                        );
+                        record(
+                          `${incident.application_name}: incident acknowledged.`,
+                        );
+                      }}
+                    >
+                      Acknowledge
+                    </button>
+                    <button
+                      className={consoleButton}
+                      disabled={busy}
+                      onClick={() => void recover(incident.appId)}
+                    >
+                      Recover last healthy version
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </section>
+      )}
+      <section className="mt-5 rounded-lg border border-white/[0.07] bg-[#0d1117] p-5">
+        <h2 className="text-sm font-medium">Event log</h2>
+        <ol className="mt-4 divide-y divide-white/[0.05]">
+          {events.map((event, index) => (
+            <li
+              key={`${index}-${event}`}
+              className="flex gap-4 py-3 font-mono text-[11px] text-slate-400"
+            >
+              <span className="text-slate-600">
+                {String(events.length - index).padStart(3, "0")}
+              </span>
+              {event}
+            </li>
+          ))}
+        </ol>
+      </section>
+    </ConsoleShell>
+  );
 }

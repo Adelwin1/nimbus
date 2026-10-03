@@ -392,3 +392,7 @@ export async function startIncidentRollback(
     authenticated: true,
   });
 }
+
+export function getReliabilityOverview(): Promise<import("@/types/insights").ReliabilityOverview> {
+  return apiRequest("/dashboard/analytics", { method: "GET", authenticated: true });
+}
