@@ -90,6 +90,7 @@ func (c *Checker) Check(
 	ctx context.Context,
 	targetURL string,
 	latencyThresholdMS int,
+	rules ...CheckRules,
 ) CheckResult {
 	startedAt := time.Now()
 
@@ -150,12 +151,8 @@ func (c *Checker) Check(
 	statusCode := response.StatusCode
 	result.StatusCode = &statusCode
 
-	bytesRead, readErr := io.Copy(
-		io.Discard,
-		io.LimitReader(
-			response.Body,
-			c.maxResponseBytes+1,
-		),
+	body, readErr := io.ReadAll(
+		io.LimitReader(response.Body, c.maxResponseBytes+1),
 	)
 
 	result.LatencyMS = time.Since(startedAt).Milliseconds()
@@ -167,26 +164,23 @@ func (c *Checker) Check(
 		return result
 	}
 
-	if bytesRead > c.maxResponseBytes {
+	if int64(len(body)) > c.maxResponseBytes {
 		message := ErrResponseTooLarge.Error()
 		result.ErrorMessage = &message
 		return result
 	}
 
-	result.Healthy =
-		response.StatusCode >= http.StatusOK &&
-			response.StatusCode < http.StatusMultipleChoices
+	var configured CheckRules
+	if len(rules) > 0 {
+		configured = rules[0]
+	}
+	message := evaluateResponse(response.StatusCode, body, configured)
+	result.Healthy = message == ""
+	result.Slow = result.Healthy &&
+		latencyThresholdMS > 0 &&
+		result.LatencyMS > int64(latencyThresholdMS)
 
-	result.Slow =
-		result.Healthy &&
-			latencyThresholdMS > 0 &&
-			result.LatencyMS > int64(latencyThresholdMS)
-
-	if !result.Healthy {
-		message := fmt.Sprintf(
-			"health endpoint returned HTTP %d",
-			response.StatusCode,
-		)
+	if message != "" {
 		result.ErrorMessage = &message
 	}
 

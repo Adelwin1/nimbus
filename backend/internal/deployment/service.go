@@ -428,6 +428,7 @@ func (s *Service) verifyDeployment(
 				"application_status":  state.Status,
 				"status_code":         check.StatusCode,
 				"latency_ms":          check.LatencyMS,
+				"error_message":       check.ErrorMessage,
 				"consecutive_healthy": consecutiveHealthy,
 				"required_healthy":    s.requiredHealthyChecks,
 			},

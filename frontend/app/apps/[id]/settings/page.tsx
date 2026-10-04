@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { CheckRulesForm } from "@/components/application/CheckRulesForm";
 import { ApplicationForm } from "@/components/application/ApplicationForm";
 import { ConsoleShell, consoleButton } from "@/components/console/ConsoleShell";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
@@ -110,6 +111,8 @@ function ApplicationSettingsContent() {
               }}
               onSubmit={handleUpdate}
             />
+
+            <CheckRulesForm key={application.id} applicationId={application.id} />
 
             <DeleteApplicationSection
               application={application}

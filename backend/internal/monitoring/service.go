@@ -188,11 +188,19 @@ func (s *Service) checkAndStore(
 	ctx context.Context,
 	application DueApplication,
 ) (HealthCheck, ApplicationState, error) {
+
+	rules, err := s.repository.LoadCheckRules(ctx, application.ID)
+	if err != nil {
+		return HealthCheck{}, ApplicationState{}, err
+	}
 	result := s.checker.Check(
 		ctx,
 		application.HealthURL,
 		application.LatencyThresholdMS,
+		rules,
 	)
+
+	addTroubleshooting(&result)
 
 	check, state, err := s.repository.StoreResult(
 		ctx,

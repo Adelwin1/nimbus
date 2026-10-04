@@ -208,6 +208,8 @@ func main() {
 		protected.Post("/", applicationHandler.Create)
 		protected.Get("/", applicationHandler.List)
 		protected.Get("/{appID}", applicationHandler.Get)
+		protected.Get("/{appID}/check-rules", monitoringHandler.CheckRulesSettings)
+		protected.Put("/{appID}/check-rules", monitoringHandler.CheckRulesSettings)
 		protected.Patch("/{appID}", applicationHandler.Update)
 		protected.Delete("/{appID}", applicationHandler.Delete)
 
