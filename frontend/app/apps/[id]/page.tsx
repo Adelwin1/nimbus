@@ -1,5 +1,11 @@
 "use client";
 
+import { RepairReviews } from "@/components/repairs/RepairReviews";
+
+import { ApplicationErrors } from "@/components/errors/ApplicationErrors";
+
+import { JourneyPanel } from "@/components/journeys/JourneyPanel";
+
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -138,6 +144,12 @@ function ApplicationOverview({ application }: { application: Application }) {
       </div>
 
       <HealthPanel applicationId={application.id} />
+      <RepairReviews key={application.id} applicationId={application.id} />
+
+      <ApplicationErrors key={application.id} applicationId={application.id} />
+
+
+      <JourneyPanel key={application.id} applicationId={application.id} />
 
       <DeploymentPanel applicationId={application.id} />
 

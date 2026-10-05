@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/adel/nimbus/backend/internal/apperrors"
+	"github.com/adel/nimbus/backend/internal/journeys"
+	"github.com/adel/nimbus/backend/internal/repairs"
 	"log/slog"
 	"net/http"
 	"os"
@@ -198,6 +201,31 @@ func main() {
 		p.Get("/", alertHandler.Inbox)
 		p.Get("/rules", alertHandler.Rules)
 		p.Put("/rules/{appID}", alertHandler.Rules)
+	})
+
+	journeyHandler := &journeys.Handler{DB: db}
+	router.Route("/api/v1/journeys", func(p chi.Router) {
+		p.Use(appmiddleware.Authenticate(authService))
+		p.Get("/apps/{appID}", journeyHandler.Applications)
+		p.Post("/apps/{appID}", journeyHandler.Applications)
+		p.Get("/{journeyID}/runs", journeyHandler.Runs)
+		p.Post("/{journeyID}/runs", journeyHandler.Runs)
+	})
+
+	errorHandler := &apperrors.Handler{DB: db}
+	router.Post("/api/v1/error-reports/{appID}", errorHandler.Report)
+	router.Route("/api/v1/application-errors", func(p chi.Router) {
+		p.Use(appmiddleware.Authenticate(authService))
+		p.Get("/apps/{appID}", errorHandler.List)
+		p.Post("/apps/{appID}/token", errorHandler.Token)
+	})
+
+	repairHandler := &repairs.Handler{DB: db}
+	router.Route("/api/v1/repair-reviews", func(p chi.Router) {
+		p.Use(appmiddleware.Authenticate(authService))
+		p.Get("/apps/{appID}", repairHandler.Reviews)
+		p.Post("/apps/{appID}", repairHandler.Reviews)
+		p.Post("/{reviewID}/decision", repairHandler.Decide)
 	})
 
 	router.Route("/api/v1/apps", func(protected chi.Router) {

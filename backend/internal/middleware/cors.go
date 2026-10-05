@@ -55,7 +55,7 @@ func CORS(
 				)
 				w.Header().Set(
 					"Access-Control-Allow-Methods",
-					"GET, POST, PATCH, DELETE, OPTIONS",
+					"GET, POST, PUT, PATCH, DELETE, OPTIONS",
 				)
 				w.Header().Set(
 					"Access-Control-Allow-Headers",

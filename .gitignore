@@ -23,3 +23,9 @@ frontend/out/
 
 # Logs
 *.log
+.vercel
+.env*
+
+node_modules/
+repair-reviews/
+browser-worker/artifacts/

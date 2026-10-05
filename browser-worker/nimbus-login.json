@@ -1,0 +1,11 @@
+{
+  "name": "Nimbus login page journey",
+  "base_url": "http://localhost:3000",
+  "steps": [
+    { "action": "navigate", "path": "/login" },
+    { "action": "expect_visible", "selector": "input[type='email']" },
+    { "action": "fill", "selector": "input[type='email']", "value": "browser-test@example.com" },
+    { "action": "expect_visible", "selector": "input[type='password']" },
+    { "action": "expect_visible", "selector": "button[type='submit']" }
+  ]
+}
