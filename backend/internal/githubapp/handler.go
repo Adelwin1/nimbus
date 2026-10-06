@@ -400,3 +400,49 @@ func (h *Handler) Link(w http.ResponseWriter, r *http.Request) {
 	}
 	fail(w, 403, "The selected repository is not accessible to your GitHub account and this app.")
 }
+
+// VerifyCommit rechecks live user access and matches a full immutable commit SHA.
+// It does not assert that an operator-supplied preview serves that commit.
+func (h *Handler) VerifyCommit(r *http.Request, app uuid.UUID, sha string) (map[string]any, error) {
+	if len(sha) != 40 {
+		return nil, errors.New("full commit required")
+	}
+	for _, c := range sha {
+		if !(c >= '0' && c <= '9' || c >= 'a' && c <= 'f') {
+			return nil, errors.New("invalid commit")
+		}
+	}
+	user, token, e := h.token(r)
+	if e != nil {
+		return nil, errors.New("GitHub authorization expired; reconnect")
+	}
+	var installationID, repositoryID int64
+	e = h.DB.QueryRow(r.Context(), `SELECT g.installation_id,g.repository_id FROM application_github_repositories g JOIN applications a ON a.id=g.application_id WHERE a.id=$1 AND a.user_id=$2`, app, user).Scan(&installationID, &repositoryID)
+	if e != nil {
+		return nil, errors.New("link a repository first")
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
+	defer cancel()
+	repos, e := h.repositories(ctx, token)
+	if e != nil {
+		return nil, errors.New("GitHub access could not be verified")
+	}
+	for _, repo := range repos {
+		if repo.ID != repositoryID || repo.InstallationID != installationID {
+			continue
+		}
+		parts := strings.Split(repo.Name, "/")
+		if len(parts) != 2 {
+			return nil, errors.New("invalid repository name")
+		}
+		endpoint := "https://api.github.com/repos/" + url.PathEscape(parts[0]) + "/" + url.PathEscape(parts[1]) + "/commits/" + sha
+		var commit struct {
+			SHA string `json:"sha"`
+		}
+		if h.request(ctx, endpoint, token, nil, &commit) != nil || commit.SHA != sha {
+			return nil, errors.New("commit was not found in the linked repository")
+		}
+		return map[string]any{"repository_id": repo.ID, "installation_id": repo.InstallationID, "repository": repo.Name, "commit_sha": commit.SHA, "preview_commit_binding": "operator_supplied"}, nil
+	}
+	return nil, errors.New("repository access is no longer available")
+}

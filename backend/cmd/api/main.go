@@ -216,7 +216,7 @@ func main() {
 		p.Put("/rules/{appID}", alertHandler.Rules)
 	})
 
-	journeyHandler := &journeys.Handler{DB: db}
+	journeyHandler := &journeys.Handler{DB: db, GitHub: githubHandler}
 	router.Route("/api/v1/journeys", func(p chi.Router) {
 		p.Use(appmiddleware.Authenticate(authService))
 		p.Get("/apps/{appID}", journeyHandler.Applications)

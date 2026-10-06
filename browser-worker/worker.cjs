@@ -94,7 +94,7 @@ async function cycle() {
     SET status='running', started_at=now(),
         lease_token=$1, lease_expires_at=now()+interval '120 seconds'
     FROM next_run n WHERE r.id=n.id
-    RETURNING r.id,r.definition
+    RETURNING r.id,r.definition,r.release_context
   `, [token]);
 
   if (!rows.length) return;
@@ -146,6 +146,7 @@ async function cycle() {
       report.evidence = report.evidence || {};
       report.evidence.error_correlation_available = false;
     }
+    report.release_context = job.release_context || {};
     report.analysis = analyzeJourney(report);
     status = report.passed ? "passed" : "failed";
     message = null;

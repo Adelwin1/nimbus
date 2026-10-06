@@ -15,6 +15,7 @@ type Run = {
   id: string;
   status: string;
   queued_at: string;
+  release_context?: { repository?: string; commit_sha?: string; preview_url?: string; preview_commit_binding?: string };
   error_message?: string | null;
   result?: {
 
@@ -65,6 +66,8 @@ export function JourneyPanel({ applicationId }: { applicationId: string }) {
   const [name, setName] = useState("Login page journey");
   const [baseURL, setBaseURL] = useState("http://localhost:3000");
   const [steps, setSteps] = useState(initialSteps);
+  const [commitSHA, setCommitSHA] = useState("");
+  const [previewURL, setPreviewURL] = useState("");
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
   const [error, setError] = useState("");
@@ -164,11 +167,12 @@ export function JourneyPanel({ applicationId }: { applicationId: string }) {
     try {
       await apiRequest(`/journeys/${selected}/runs`, {
         authenticated: true, method: "POST",
+        body: JSON.stringify({commit_sha:commitSHA.trim(),preview_url:previewURL.trim()}),
       });
       setRevision(value => value + 1);
       setMessage("Run queued. The browser worker will execute it.");
-    } catch {
-      setError("Run could not be queued. A test may already be queued or running.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Run could not be queued.");
     } finally {
       lock.current = false;
       setBusy(false);
@@ -227,6 +231,18 @@ export function JourneyPanel({ applicationId }: { applicationId: string }) {
               )}
             </select>
           </label>
+          <div className="mt-4 space-y-3 rounded-md border border-white/10 p-4">
+            <h3 className="text-sm font-semibold">Release context (optional)</h3>
+            <label className="block text-sm">Full commit SHA
+              <input className={inputClass} value={commitSHA} maxLength={40} disabled={busy || pending}
+                onChange={event => setCommitSHA(event.target.value)} placeholder="40-character Git commit SHA" />
+            </label>
+            <label className="block text-sm">Preview origin
+              <input className={inputClass} value={previewURL} maxLength={2048} disabled={busy || pending}
+                onChange={event => setPreviewURL(event.target.value)} placeholder="https://your-preview.example.com" />
+            </label>
+            <p className="text-xs text-slate-400">Provide both fields or leave both blank. Nimbus verifies the commit in the linked repository. You are responsible for confirming the preview serves that commit. The worker must allow this origin.</p>
+          </div>
           <button type="button"
             className="mt-4 rounded-md bg-teal-400 px-4 py-2 text-sm font-medium text-black disabled:opacity-40"
             disabled={busy || !selected || pending}
@@ -240,6 +256,12 @@ export function JourneyPanel({ applicationId }: { applicationId: string }) {
               <p className="font-mono text-sm">
                 Latest run: <strong>{latest.status}</strong>
               </p>
+              {latest.release_context?.commit_sha && <div className="mt-3 break-all rounded-md border border-white/10 p-3 text-xs text-slate-400">
+                <p>Repository: {latest.release_context.repository}</p>
+                <p>Commit: {latest.release_context.commit_sha}</p>
+                <p>Preview: {latest.release_context.preview_url}</p>
+                <p className="mt-2">Preview-to-commit association supplied by the operator.</p>
+              </div>}
               {latest.error_message &&
                 <p className="mt-2 text-sm text-rose-300">{latest.error_message}</p>}
               <ol className="mt-4 space-y-3">
@@ -309,7 +331,7 @@ export function JourneyPanel({ applicationId }: { applicationId: string }) {
               <ul className="mt-2 space-y-2 text-sm text-slate-400">
                 {runs.map(run => (
                   <li key={run.id}>
-                    {new Date(run.queued_at).toLocaleString()} — {run.status}
+                    {new Date(run.queued_at).toLocaleString()} — {run.status}{run.release_context?.commit_sha ? ` · ${run.release_context.commit_sha.slice(0, 8)}` : ""}
                   </li>
                 ))}
               </ul>

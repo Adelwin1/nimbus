@@ -10,6 +10,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/adel/nimbus/backend/internal/githubapp"
 	mw "github.com/adel/nimbus/backend/internal/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -17,7 +18,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Handler struct{ DB *pgxpool.Pool }
+type Handler struct {
+	DB     *pgxpool.Pool
+	GitHub *githubapp.Handler
+}
 
 type Step struct {
 	Action   string  `json:"action"`
@@ -183,7 +187,7 @@ func (h *Handler) Runs(w http.ResponseWriter, r *http.Request) {
 		var body []byte
 		err = tx.QueryRow(r.Context(), `
 			SELECT COALESCE(jsonb_agg(to_jsonb(x)), '[]'::jsonb)
-			FROM (SELECT id,status,result,error_message,queued_at,started_at,finished_at
+			FROM (SELECT id,status,result,error_message,queued_at,started_at,finished_at,release_context
 			      FROM browser_journey_runs WHERE journey_id=$1
 			      ORDER BY queued_at DESC LIMIT 25) x`, journey).Scan(&body)
 		if err != nil {
@@ -210,10 +214,50 @@ func (h *Handler) Runs(w http.ResponseWriter, r *http.Request) {
 		fail(w, 409, "This journey already has a queued or running test.")
 		return
 	}
+
+	var input RunInput
+	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096))
+	decoder.DisallowUnknownFields()
+	decodeErr := decoder.Decode(&input)
+	var extra any
+	if (decodeErr != nil && decodeErr != io.EOF) || (decodeErr == nil && decoder.Decode(&extra) != io.EOF) || !validRelease(&input) {
+		fail(w, 400, "Provide a full lowercase 40-character commit SHA and a public HTTPS preview origin, or leave both empty.")
+		return
+	}
+	release := map[string]any{}
+	if input.CommitSHA != "" {
+		if h.GitHub == nil {
+			fail(w, 503, "Release tracking is unavailable.")
+			return
+		}
+		var app uuid.UUID
+		if tx.QueryRow(r.Context(), `SELECT application_id FROM browser_journeys WHERE id=$1`, journey).Scan(&app) != nil {
+			fail(w, 500, "Run could not be queued.")
+			return
+		}
+		release, err = h.GitHub.VerifyCommit(r, app, input.CommitSHA)
+		if err != nil {
+			fail(w, 409, err.Error())
+			return
+		}
+		var d Definition
+		if json.Unmarshal(definition, &d) != nil {
+			fail(w, 500, "Journey definition unavailable.")
+			return
+		}
+		d.BaseURL = input.PreviewURL
+		if !valid(&d) {
+			fail(w, 400, "Journey contains navigation to another origin. Use relative navigation paths for preview runs.")
+			return
+		}
+		definition, _ = json.Marshal(d)
+		release["preview_url"] = input.PreviewURL
+	}
+	releaseJSON, _ := json.Marshal(release)
 	id := uuid.New()
 	_, err = tx.Exec(r.Context(), `
-		INSERT INTO browser_journey_runs(id,journey_id,definition)
-		VALUES($1,$2,$3::jsonb)`, id, journey, definition)
+		INSERT INTO browser_journey_runs(id,journey_id,definition,release_context)
+		VALUES($1,$2,$3::jsonb,$4::jsonb)`, id, journey, definition, releaseJSON)
 	if err != nil {
 		fail(w, 500, "Run could not be queued.")
 		return
