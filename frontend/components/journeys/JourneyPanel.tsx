@@ -11,9 +11,15 @@ type Journey = {
   base_url: string;
   enabled: boolean;
 };
+type SourceInvestigation = {
+ repository: string; commit_sha: string; baseline_commit?: string;
+ candidates: {path: string; url: string; changed_since_baseline: boolean; matching_lines: number[]; reasons: string[]}[];
+ facts: string[]; actions: string[]; limitations: string[];
+};
 type Run = {
   id: string;
   status: string;
+  source_investigation?: SourceInvestigation | null;
   queued_at: string;
   release_context?: { repository?: string; commit_sha?: string; preview_url?: string; preview_commit_binding?: string };
   error_message?: string | null;
@@ -179,6 +185,17 @@ export function JourneyPanel({ applicationId }: { applicationId: string }) {
     }
   }
 
+  async function investigate(runId: string) {
+    if (lock.current) return;
+    lock.current = true; setBusy(true); setError("");
+    try {
+      await apiRequest(`/github/runs/${runId}/investigate`, {authenticated:true, method:"POST"});
+      setRevision(value => value + 1);
+      setMessage("Source investigation saved. Candidates are leads, not confirmed causes.");
+    } catch (err) {setError(err instanceof Error ? err.message : "Source investigation unavailable.");}
+    finally {lock.current = false; setBusy(false);}
+  }
+
   const latest = selected ? runs[0] : undefined;
   const pending = runs.some(run => ["queued", "running"].includes(run.status));
 
@@ -261,6 +278,24 @@ export function JourneyPanel({ applicationId }: { applicationId: string }) {
                 <p>Commit: {latest.release_context.commit_sha}</p>
                 <p>Preview: {latest.release_context.preview_url}</p>
                 <p className="mt-2">Preview-to-commit association supplied by the operator.</p>
+              </div>}
+              {latest.status === "failed" && latest.release_context?.commit_sha && <button type="button" className={`mt-4 ${buttonClass}`} disabled={busy}
+                onClick={() => {void investigate(latest.id);}}>Investigate source</button>}
+              {latest.source_investigation && <div className="mt-4 rounded-md border border-white/10 p-4">
+                <h3 className="font-semibold">Source investigation</h3>
+                <p className="mt-2 text-xs text-slate-400">Commit: {latest.source_investigation.commit_sha}</p>
+                {latest.source_investigation.baseline_commit && <p className="text-xs text-slate-400">Earlier passing commit: {latest.source_investigation.baseline_commit}</p>}
+                <ul className="mt-3 space-y-2 text-sm">{latest.source_investigation.facts.map((fact,index)=><li key={index}>{fact}</li>)}</ul>
+                <h4 className="mt-4 text-sm font-semibold">Candidate source files</h4>
+                {latest.source_investigation.candidates.map(file=><div key={file.path} className="mt-3 text-sm">
+                  <a className="break-all text-teal-300" href={file.url} target="_blank" rel="noopener noreferrer">{file.path}</a>
+                  <p className="text-xs text-slate-400">Matching lines: {file.matching_lines.join(", ") || "none"}</p>
+                  <ul className="mt-1 text-xs text-slate-400">{file.reasons.map((reason,index)=><li key={index}>{reason}</li>)}</ul>
+                </div>)}
+                <h4 className="mt-4 text-sm font-semibold">Next steps</h4>
+                <ul className="mt-2 space-y-2 text-sm">{latest.source_investigation.actions.map((action,index)=><li key={index}>{action}</li>)}</ul>
+                <h4 className="mt-4 text-sm font-semibold">Limits of this investigation</h4>
+                <ul className="mt-2 space-y-2 text-xs text-slate-400">{latest.source_investigation.limitations.map((limit,index)=><li key={index}>{limit}</li>)}</ul>
               </div>}
               {latest.error_message &&
                 <p className="mt-2 text-sm text-rose-300">{latest.error_message}</p>}

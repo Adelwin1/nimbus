@@ -187,7 +187,7 @@ func (h *Handler) Runs(w http.ResponseWriter, r *http.Request) {
 		var body []byte
 		err = tx.QueryRow(r.Context(), `
 			SELECT COALESCE(jsonb_agg(to_jsonb(x)), '[]'::jsonb)
-			FROM (SELECT id,status,result,error_message,queued_at,started_at,finished_at,release_context
+			FROM (SELECT id,status,result,error_message,queued_at,started_at,finished_at,release_context,source_investigation
 			      FROM browser_journey_runs WHERE journey_id=$1
 			      ORDER BY queued_at DESC LIMIT 25) x`, journey).Scan(&body)
 		if err != nil {

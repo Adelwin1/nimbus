@@ -195,6 +195,7 @@ func main() {
 		p.Post("/start", githubHandler.Start)
 		p.Delete("/connection", githubHandler.Disconnect)
 		p.Get("/repositories", githubHandler.Repositories)
+		p.Post("/runs/{runID}/investigate", githubHandler.Investigate)
 		p.Put("/apps/{appID}/repository", githubHandler.Link)
 	})
 
