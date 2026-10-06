@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/adel/nimbus/backend/internal/apperrors"
+	"github.com/adel/nimbus/backend/internal/githubapp"
 	"github.com/adel/nimbus/backend/internal/journeys"
 	"github.com/adel/nimbus/backend/internal/repairs"
 	"log/slog"
@@ -184,6 +185,18 @@ func main() {
 			activityRecorder,
 		),
 	)
+
+	githubHandler := githubapp.New(db, encryptor)
+	router.Get("/api/v1/github/authorize", githubHandler.Authorize)
+	router.Get("/api/v1/github/callback", githubHandler.Callback)
+	router.Route("/api/v1/github", func(p chi.Router) {
+		p.Use(appmiddleware.Authenticate(authService))
+		p.Get("/status", githubHandler.Status)
+		p.Post("/start", githubHandler.Start)
+		p.Delete("/connection", githubHandler.Disconnect)
+		p.Get("/repositories", githubHandler.Repositories)
+		p.Put("/apps/{appID}/repository", githubHandler.Link)
+	})
 
 	ps := &publicstatus.Handler{DB: db}
 	router.Get("/api/v1/status/{slug}", ps.Public)

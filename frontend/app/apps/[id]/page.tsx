@@ -144,12 +144,12 @@ function ApplicationOverview({ application }: { application: Application }) {
       </div>
 
       <HealthPanel applicationId={application.id} />
-      <RepairReviews key={application.id} applicationId={application.id} />
+      <RepairReviews key={"repairs-" + application.id} applicationId={application.id} />
 
-      <ApplicationErrors key={application.id} applicationId={application.id} />
+      <ApplicationErrors key={"errors-" + application.id} applicationId={application.id} />
 
 
-      <JourneyPanel key={application.id} applicationId={application.id} />
+      <JourneyPanel key={"journeys-" + application.id} applicationId={application.id} />
 
       <DeploymentPanel applicationId={application.id} />
 
