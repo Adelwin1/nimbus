@@ -251,7 +251,7 @@ func (h *Handler) Investigate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	terms := searchTerms(definition, result)
-	output.Candidates = rankSources(paths, terms, changed)
+	output.Candidates = rankForFailure(paths, terms, changed, definition, result)
 	for i := range output.Candidates {
 		file := &output.Candidates[i]
 		escaped := []string{}
