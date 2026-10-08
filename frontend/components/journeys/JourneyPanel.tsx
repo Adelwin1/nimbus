@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import RepositoryChecks from "./RepositoryChecks";
 
 import { useEffect, useRef, useState } from "react";
 import { apiRequest } from "@/lib/api";
@@ -176,7 +177,7 @@ export function JourneyPanel({ applicationId }: { applicationId: string }) {
         body: JSON.stringify({commit_sha:commitSHA.trim(),preview_url:previewURL.trim()}),
       });
       setRevision(value => value + 1);
-      setMessage("Run queued. The browser worker will execute it.");
+      setMessage("Run queued. Hosted checks can take a few minutes to start.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Run could not be queued.");
     } finally {
@@ -281,6 +282,8 @@ export function JourneyPanel({ applicationId }: { applicationId: string }) {
               </div>}
               {latest.status === "failed" && latest.release_context?.commit_sha && <button type="button" className={`mt-4 ${buttonClass}`} disabled={busy}
                 onClick={() => {void investigate(latest.id);}}>Investigate source</button>}
+              {latest.release_context?.commit_sha && latest.release_context.repository &&
+                <RepositoryChecks key={latest.id} runId={latest.id} repository={latest.release_context.repository} commit={latest.release_context.commit_sha} />}
               {latest.source_investigation && <div className="mt-4 rounded-md border border-white/10 p-4">
                 <h3 className="font-semibold">Source investigation</h3>
                 <p className="mt-2 text-xs text-slate-400">Commit: {latest.source_investigation.commit_sha}</p>

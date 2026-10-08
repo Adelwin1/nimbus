@@ -385,3 +385,13 @@ func hashToken(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])
 }
+
+// CreateExternalSession is called only after a server-side identity provider flow
+// verifies the identity and consumes a browser-bound, single-use exchange.
+func (s *Service) CreateExternalSession(ctx context.Context, userID uuid.UUID) (AuthResponse, error) {
+	user, err := s.repository.FindUserByID(ctx, userID)
+	if err != nil {
+		return AuthResponse{}, err
+	}
+	return s.createAuthenticatedSession(ctx, user)
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import GitHubSignIn from "@/components/auth/GitHubSignIn";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm, type UseFormRegisterReturn } from "react-hook-form";
@@ -60,16 +61,20 @@ export default function LoginPage() {
           Nimbus
         </Link>
 
-        <h1 className="mt-4 text-3xl font-semibold">Welcome back</h1>
+        <h1 className="mt-4 text-3xl font-semibold">Open your workspace</h1>
 
         <p className="mt-2 text-sm text-slate-400">
-          Sign in to your reliability dashboard.
+          Use GitHub to enter the real workspace. No separate Nimbus signup required.
         </p>
+
+        <GitHubSignIn />
+        <p className="mt-2 text-xs text-slate-400">Your repositories and results stay in your private workspace.</p>
 
         <Link href="/demo" className="mt-6 block rounded-lg border border-sky-800 bg-sky-950/40 px-4 py-3 text-center text-sm font-semibold text-sky-300 hover:bg-sky-950">
           Explore demo — no login required
         </Link>
 
+        <p className="mt-6 text-xs text-slate-500">Existing email account? Sign in below.</p>
         <form
           noValidate
           onSubmit={handleSubmit(onSubmit)}
@@ -108,12 +113,10 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-slate-400">
-          Need an account?{" "}
-          <Link href="/register" className="font-semibold text-teal-300">
-            Register
-          </Link>
-        </p>
+        <details className="mt-6 text-sm text-slate-500">
+          <summary className="cursor-pointer">Email account options</summary>
+          <Link href="/register" className="mt-2 inline-block text-teal-300">Optional email registration</Link>
+        </details>
       </section>
     </main>
   );

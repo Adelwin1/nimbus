@@ -1,4 +1,5 @@
 import Link from "next/link";
+import GitHubSignIn from "@/components/auth/GitHubSignIn";
 
 export default function HomePage() {
   return (
@@ -34,15 +35,9 @@ export default function HomePage() {
           workspace. Follow a deployment from its first probe to its last
           healthy version.
         </p>
-        <Link
-          href="/demo"
-          className="mt-8 inline-flex rounded-md bg-teal-400 px-10 py-4 text-lg font-semibold text-slate-950 transition hover:bg-teal-300"
-        >
-          Get started
-        </Link>
-        <p className="mt-3 text-xs text-slate-500">
-          No login required · Explore the interactive demo
-        </p>
+        <div className="mx-auto mt-8 max-w-sm"><GitHubSignIn /></div>
+        <p className="mt-3 text-xs text-slate-500">Real workspace · No separate Nimbus signup</p>
+        <Link href="/demo" className="mt-4 inline-block text-sm text-slate-400 hover:text-white">Explore the sample demo</Link>
         <div className="mx-auto mt-14 max-w-4xl overflow-hidden rounded-lg border border-white/10 bg-[#0d1117] text-left shadow-2xl">
           <div className="flex justify-between border-b border-white/[0.07] px-5 py-4">
             <span className="font-mono text-[10px] text-slate-400">

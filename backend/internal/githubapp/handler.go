@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/adel/nimbus/backend/internal/auth"
 	appcrypto "github.com/adel/nimbus/backend/internal/crypto"
 	mw "github.com/adel/nimbus/backend/internal/middleware"
 	"github.com/go-chi/chi/v5"
@@ -26,6 +27,7 @@ import (
 )
 
 type Handler struct {
+	Auth                                                          *auth.Service
 	DB                                                            *pgxpool.Pool
 	Encryptor                                                     *appcrypto.Encryptor
 	Client                                                        *http.Client
@@ -52,7 +54,7 @@ func nonce() (string, error) {
 	return base64.RawURLEncoding.EncodeToString(b), e
 }
 func hash(s string) []byte { v := sha256.Sum256([]byte(s)); return v[:] }
-func (h *Handler) configured() bool {
+func (h *Handler) productionConfigured() bool {
 	u, e := url.Parse(h.CallbackURL)
 	f, fe := url.Parse(h.FrontendURL)
 	return h.ClientID != "" && h.ClientSecret != "" && h.AppID != "" && e == nil && fe == nil && u.Scheme == "https" && u.Host != "" && f.Scheme == "https" && f.Host != "" && u.User == nil && f.User == nil && f.RawQuery == "" && f.Fragment == ""
@@ -116,7 +118,7 @@ func (h *Handler) Authorize(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "Connection link expired. Start again in Nimbus.")
 		return
 	}
-	http.SetCookie(w, &http.Cookie{Name: "__Host-nimbus-github", Value: state, Path: "/", Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode, MaxAge: 600})
+	http.SetCookie(w, h.oauthCookie(state, 600))
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Referrer-Policy", "no-referrer")
 	q := url.Values{"client_id": {h.ClientID}, "redirect_uri": {h.CallbackURL}, "state": {state}}
@@ -166,14 +168,15 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	state := r.URL.Query().Get("state")
-	cookie, e := r.Cookie("__Host-nimbus-github")
+	cookie, e := r.Cookie(h.oauthCookieName())
 	if e != nil || len(state) != 43 || subtle.ConstantTimeCompare([]byte(state), []byte(cookie.Value)) != 1 {
 		fail(w, 400, "Invalid GitHub authorization. Start from Nimbus.")
 		return
 	}
-	http.SetCookie(w, &http.Cookie{Name: "__Host-nimbus-github", Value: "", Path: "/", Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode, MaxAge: -1})
-	var id uuid.UUID
-	e = h.DB.QueryRow(r.Context(), `DELETE FROM github_oauth_states WHERE state_hash=$1 AND phase='oauth' AND expires_at>now() RETURNING user_id`, hash(state)).Scan(&id)
+	http.SetCookie(w, h.oauthCookie("", -1))
+	var id *uuid.UUID
+	var challenge []byte
+	e = h.DB.QueryRow(r.Context(), `DELETE FROM github_oauth_states WHERE state_hash=$1 AND phase='oauth' AND expires_at>now() RETURNING user_id,login_challenge`, hash(state)).Scan(&id, &challenge)
 	if e != nil {
 		fail(w, 400, "Authorization expired or already used.")
 		return
@@ -201,9 +204,17 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		fail(w, 502, "GitHub identity could not be verified.")
 		return
 	}
+	if id == nil {
+		h.finishLogin(w, r, user.ID, user.Login, result.Token, result.Expires, challenge)
+		return
+	}
 	encrypted, e := h.Encryptor.Encrypt(result.Token)
 	if e != nil {
 		fail(w, 500, "Connection unavailable.")
+		return
+	}
+	if _, e = h.resolveIdentity(r.Context(), user.ID, user.Login, id); e != nil {
+		fail(w, 409, "This GitHub identity cannot be attached to this workspace. Sign in with GitHub or use the original account.")
 		return
 	}
 	_, e = h.DB.Exec(r.Context(), `INSERT INTO github_authorizations(user_id,github_user_id,login,token_encrypted,expires_at) VALUES($1,$2,$3,$4,$5) ON CONFLICT(user_id) DO UPDATE SET github_user_id=EXCLUDED.github_user_id,login=EXCLUDED.login,token_encrypted=EXCLUDED.token_encrypted,expires_at=EXCLUDED.expires_at,connected_at=now()`, id, user.ID, user.Login, encrypted, time.Now().Add(time.Duration(result.Expires)*time.Second))

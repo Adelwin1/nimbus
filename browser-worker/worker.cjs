@@ -6,6 +6,8 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const os = require("node:os");
 
+const { jobOptions } = require("../hosted-workers/job.cjs");
+const hosted = jobOptions();
 const database = process.env.DATABASE_URL;
 const allowed = new Set(
   (process.env.JOURNEY_ALLOWED_ORIGINS || "")
@@ -86,7 +88,7 @@ async function cycle() {
   const { rows } = await pool.query(`
     WITH next_run AS (
       SELECT id FROM browser_journey_runs
-      WHERE status='queued'
+      WHERE status='queued' AND ($2::uuid IS NULL OR id=$2::uuid)
       ORDER BY queued_at
       FOR UPDATE SKIP LOCKED LIMIT 1
     )
@@ -95,7 +97,7 @@ async function cycle() {
         lease_token=$1, lease_expires_at=now()+interval '120 seconds'
     FROM next_run n WHERE r.id=n.id
     RETURNING r.id,r.definition,r.release_context
-  `, [token]);
+  `, [token, hosted.id]);
 
   if (!rows.length) return;
   const job = rows[0];
@@ -174,7 +176,9 @@ async function cycle() {
         await cycle();
       } catch {
         console.error("Queue unavailable; retrying.");
+        if (hosted.once) throw new Error("Hosted queue unavailable.");
       }
+      if (hosted.once) break;
       if (!stopping) await new Promise(resolve => setTimeout(resolve, 2000));
     }
   } finally {

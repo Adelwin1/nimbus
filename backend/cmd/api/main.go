@@ -187,6 +187,10 @@ func main() {
 	)
 
 	githubHandler := githubapp.New(db, encryptor)
+	githubHandler.Auth = authService
+	router.Get("/api/v1/github/login", githubHandler.LoginStart)
+	router.Post("/api/v1/github/login/exchange", githubHandler.LoginExchange)
+	router.Get("/api/v1/github/code-checks/{checkID}/source", githubHandler.WorkerSource)
 	router.Get("/api/v1/github/authorize", githubHandler.Authorize)
 	router.Get("/api/v1/github/callback", githubHandler.Callback)
 	router.Route("/api/v1/github", func(p chi.Router) {
@@ -196,6 +200,8 @@ func main() {
 		p.Delete("/connection", githubHandler.Disconnect)
 		p.Get("/repositories", githubHandler.Repositories)
 		p.Post("/runs/{runID}/investigate", githubHandler.Investigate)
+		p.Post("/runs/{runID}/checks", githubHandler.QueueCheck)
+		p.Get("/runs/{runID}/checks", githubHandler.ListChecks)
 		p.Put("/apps/{appID}/repository", githubHandler.Link)
 	})
 

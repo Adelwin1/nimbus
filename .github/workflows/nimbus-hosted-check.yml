@@ -1,0 +1,69 @@
+name: Nimbus hosted check
+run-name: Nimbus ${{ inputs.kind }} check ${{ inputs.job_id }}
+on:
+  workflow_dispatch:
+    inputs:
+      kind:
+        description: Check type
+        type: choice
+        options: [browser, repository]
+        required: true
+      job_id:
+        description: Queued Nimbus job UUID
+        type: string
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: nimbus-check-${{ inputs.job_id }}
+  cancel-in-progress: false
+jobs:
+  check:
+    if: github.event.repository.private == false && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Validate job input
+        env:
+          NIMBUS_JOB_ID: ${{ inputs.job_id }}
+        run: node -e 'require("./hosted-workers/job.cjs").jobOptions()'
+      - name: Install trusted worker dependencies
+        working-directory: browser-worker
+        run: npm ci
+      - name: Install Chromium
+        if: inputs.kind == 'browser'
+        working-directory: browser-worker
+        run: npx playwright install --with-deps chromium
+      - name: Pull repository execution images
+        if: inputs.kind == 'repository'
+        run: |
+          docker pull node:24-bookworm-slim
+          docker pull golang:1.26.4-bookworm
+      - name: Execute one browser journey
+        if: inputs.kind == 'browser'
+        working-directory: browser-worker
+        env:
+          DATABASE_URL: ${{ secrets.NIMBUS_WORKER_DATABASE_URL }}
+          JOURNEY_ALLOWED_ORIGINS: ${{ vars.NIMBUS_JOURNEY_ALLOWED_ORIGINS }}
+          NIMBUS_JOB_ID: ${{ inputs.job_id }}
+        run: node worker.cjs
+      - name: Execute one repository check
+        if: inputs.kind == 'repository'
+        env:
+          DATABASE_URL: ${{ secrets.NIMBUS_WORKER_DATABASE_URL }}
+          NIMBUS_API_ORIGIN: ${{ vars.NIMBUS_API_ORIGIN }}
+          NIMBUS_JOB_ID: ${{ inputs.job_id }}
+        run: node code-worker/worker.cjs
+      - name: Record infrastructure failure if the job did not finish
+        if: failure() || cancelled()
+        env:
+          DATABASE_URL: ${{ secrets.NIMBUS_WORKER_DATABASE_URL }}
+          NIMBUS_JOB_ID: ${{ inputs.job_id }}
+          NIMBUS_JOB_KIND: ${{ inputs.kind }}
+        run: node hosted-workers/fail-job.cjs

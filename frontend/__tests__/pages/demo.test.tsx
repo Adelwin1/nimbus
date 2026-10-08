@@ -9,16 +9,11 @@ vi.mock("recharts", async (importOriginal) => ({
 import DemoPage from "@/app/demo/page";
 import HomePage from "@/app/page";
 
-it("takes visitors directly into the demo from the main CTA", () => {
+it("makes GitHub the primary entry and keeps the demo optional", () => {
   render(<HomePage />);
-  expect(screen.getByRole("link", { name: "Get started" })).toHaveAttribute(
-    "href",
-    "/demo",
-  );
-  expect(screen.getByRole("link", { name: "Log in" })).toHaveAttribute(
-    "href",
-    "/login",
-  );
+  expect(screen.getByRole("button", { name: "Continue with GitHub" })).toBeVisible();
+  expect(screen.getByRole("link", { name: "Explore the sample demo" })).toHaveAttribute("href", "/demo");
+  expect(screen.getByRole("link", { name: "Log in" })).toHaveAttribute("href", "/login");
 });
 
 it("simulates an outage, acknowledgment and recovery without backend requests", async () => {

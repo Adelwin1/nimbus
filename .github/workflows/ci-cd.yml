@@ -164,6 +164,12 @@ jobs:
         run: npm test
       - name: Test repair proposal and verification tools
         run: node --test repair-tools/*.test.cjs
+      - name: Test repository execution policy
+        run: node --test code-worker/runner.test.cjs hosted-workers/*.test.cjs
+      - name: Pull Node execution image
+        run: docker pull node:24-bookworm-slim
+      - name: Test real isolated repository execution
+        run: node --test code-worker/runner.integration.test.cjs
 
   quality-gate:
     name: Nimbus Quality Gate

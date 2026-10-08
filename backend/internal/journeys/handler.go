@@ -1,8 +1,10 @@
 package journeys
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"github.com/adel/nimbus/backend/internal/workerdispatch"
 	"io"
 	"net/http"
 	"net/url"
@@ -184,6 +186,7 @@ func (h *Handler) Runs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == http.MethodGet {
+		_, _ = tx.Exec(r.Context(), `UPDATE browser_journey_runs SET status='error',error_message='Job did not start or finish. Please run a new journey.',finished_at=now(),lease_token=NULL,lease_expires_at=NULL WHERE journey_id=$1 AND ((status='queued' AND queued_at<now()-interval '20 minutes') OR (status='running' AND lease_expires_at<now()))`, journey)
 		var body []byte
 		err = tx.QueryRow(r.Context(), `
 			SELECT COALESCE(jsonb_agg(to_jsonb(x)), '[]'::jsonb)
@@ -191,6 +194,10 @@ func (h *Handler) Runs(w http.ResponseWriter, r *http.Request) {
 			      FROM browser_journey_runs WHERE journey_id=$1
 			      ORDER BY queued_at DESC LIMIT 25) x`, journey).Scan(&body)
 		if err != nil {
+			fail(w, 500, "Journey runs unavailable.")
+			return
+		}
+		if tx.Commit(r.Context()) != nil {
 			fail(w, 500, "Journey runs unavailable.")
 			return
 		}
@@ -255,6 +262,10 @@ func (h *Handler) Runs(w http.ResponseWriter, r *http.Request) {
 	}
 	releaseJSON, _ := json.Marshal(release)
 	id := uuid.New()
+	if err = workerdispatch.Reserve(r.Context(), tx, user, id, "browser"); err != nil {
+		fail(w, 429, err.Error())
+		return
+	}
 	_, err = tx.Exec(r.Context(), `
 		INSERT INTO browser_journey_runs(id,journey_id,definition,release_context)
 		VALUES($1,$2,$3::jsonb,$4::jsonb)`, id, journey, definition, releaseJSON)
@@ -264,6 +275,11 @@ func (h *Handler) Runs(w http.ResponseWriter, r *http.Request) {
 	}
 	if tx.Commit(r.Context()) != nil {
 		fail(w, 500, "Run could not be queued.")
+		return
+	}
+	if err = workerdispatch.Dispatch(r.Context(), "browser", id); err != nil {
+		_, _ = h.DB.Exec(context.Background(), `UPDATE browser_journey_runs SET status='error',error_message=$2,finished_at=now() WHERE id=$1 AND status='queued'`, id, err.Error())
+		fail(w, 503, err.Error())
 		return
 	}
 	reply(w, 202, map[string]any{

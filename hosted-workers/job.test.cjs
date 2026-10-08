@@ -1,0 +1,2 @@
+const {test}=require('node:test');const assert=require('node:assert/strict');const {jobOptions}=require('./job.cjs');
+test('hosted jobs require an exact UUID, not SQL or shell input',()=>{assert.throws(()=>jobOptions({NIMBUS_JOB_ID:"';drop table users;--"}));assert.throws(()=>jobOptions({NIMBUS_JOB_ID:''}));assert.equal(jobOptions({NIMBUS_JOB_ID:'8355ee4a-0724-4760-977f-fb60247952b0'}).once,true);assert.deepEqual(jobOptions({}),{once:false,id:null});});
